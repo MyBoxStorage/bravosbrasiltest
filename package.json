@@ -1,0 +1,23 @@
+{
+  "name": "bravos-brasil",
+  "version": "1.0.0",
+  "description": "BRAVOS BRASIL - Loja de camisetas premium patrióticas brasileiras",
+  "private": true,
+  "scripts": {
+    "dev": "npx serve .",
+    "build": "echo 'Static site - no build needed'",
+    "start": "npx serve ."
+  },
+  "keywords": [
+    "brasil",
+    "patriotic",
+    "tshirts",
+    "ecommerce",
+    "landing-page"
+  ],
+  "author": "BRAVOS BRASIL",
+  "license": "MIT",
+  "devDependencies": {
+    "serve": "^14.2.0"
+  }
+}
