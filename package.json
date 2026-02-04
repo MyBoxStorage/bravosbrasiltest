@@ -1,8 +1,20 @@
 {
-  "name": "verde-ouro-co",
+  "name": "bravos-brasil",
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "echo \"Static site - no build needed\""
+    "build": "echo \"Static site - no build needed\"",
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "@google/genai": "^1.39.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "mercadopago": "^2.2.0",
+    "googleapis": "^144.0.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.7"
   }
 }

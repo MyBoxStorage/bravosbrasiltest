@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR" x-data="storeApp()" x-init="initApp()" :class="{ 'dark': darkMode }">
+<html lang="pt-BR">
 <head>
   <!-- ============================================ -->
   <!-- META TAGS & SEO -->
@@ -10,7 +10,7 @@
   
   <!-- Primary SEO -->
   <title>BRAVOS BRASIL | Camisetas Premium Patrióticas - Vista Seu Orgulho</title>
-  <meta name="description" content="Camisetas premium com designs patrióticos exclusivos. 100% algodão brasileiro, estampas de alta qualidade. Deus, Família, Pátria. Frete grátis para todo o Brasil.">
+  <meta name="description" content="Camisetas premium com designs exclusivos com identidade nacional. 100% algodão brasileiro, estampas de alta qualidade. Deus, Família, Pátria. Frete grátis para todo o Brasil.">
   <meta name="keywords" content="camisetas patrióticas, camisetas Brasil, moda conservadora, camisetas verde e amarelo, orgulho brasileiro">
   <meta name="author" content="BRAVOS BRASIL">
   <meta name="robots" content="index, follow">
@@ -20,7 +20,7 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://bravosbrasil.com.br">
   <meta property="og:title" content="BRAVOS BRASIL | Camisetas Premium Patrióticas">
-  <meta property="og:description" content="Vista seu orgulho brasileiro com camisetas premium de alta qualidade. Designs exclusivos patrióticos.">
+  <meta property="og:description" content="Vista seu orgulho brasileiro com camisetas premium de alta qualidade. Designs exclusivos com identidade nacional.">
   <meta property="og:image" content="https://bravosbrasil.com.br/og-image.jpg">
   
   <!-- Twitter -->
@@ -87,6 +87,10 @@
             bounceSlight: {
               '0%, 100%': { transform: 'translateY(-5%)' },
               '50%': { transform: 'translateY(0)' },
+            },
+            countUp: {
+              'from': { opacity: '0', transform: 'translateY(10px)' },
+              'to': { opacity: '1', transform: 'translateY(0)' },
             }
           }
         }
@@ -99,6 +103,1750 @@
   
   <!-- Swiper CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
+  
+  <!-- Alpine.js App Data - MUST be before Alpine.js -->
+  <script>
+    // ============================================
+    // ALPINE.JS APP DATA
+    // ============================================
+    function storeApp() {
+      return {
+        // UI State
+        scrolled: false,
+        mobileMenuOpen: false,
+        openCart: false,
+        openCheckout: false,
+        darkMode: false,
+        
+        // Speech Bubble State
+        speechBubbleVisible: false,
+        speechBubbleDismissed: localStorage.getItem('wizardBubbleDismissed') === 'true',
+        
+        // Função para dispensar o balão
+        dismissSpeechBubble() {
+          this.speechBubbleDismissed = true;
+          localStorage.setItem('wizardBubbleDismissed', 'true');
+        },
+        
+        // Função para ativar modo guiado via balão
+        activateGuidedMode() {
+          this.geradorEstampas.advancedMode = false;
+          this.geradorEstampas.wizardMode = true;
+          this.speechBubbleDismissed = true;
+          localStorage.setItem('wizardBubbleDismissed', 'true');
+          
+          // Scroll suave até o wizard
+          setTimeout(() => {
+            const wizardSection = document.querySelector('#wizard-section');
+            if (wizardSection) {
+              wizardSection.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center' 
+              });
+            }
+          }, 100);
+        },
+        
+        // Cart
+        cart: [],
+        
+        // Newsletter
+        newsletter: {
+          name: '',
+          email: '',
+          phone: ''
+        },
+        
+        // Checkout
+        checkout: {
+          name: '',
+          email: '',
+          phone: '',
+          cep: '',
+          address: '',
+          number: '',
+          complement: '',
+          neighborhood: '',
+          city: '',
+          state: ''
+        },
+        
+        // Toast
+        toast: {
+          show: false,
+          message: '',
+          type: 'success'
+        },
+        
+        // Authentication
+        auth: {
+          token: null,
+          user: null,
+          isAuthenticated: false
+        },
+        
+        // Gerador de Estampas
+        geradorEstampas: {
+          prompt: '',
+          imageFile: null,
+          imagePreview: null,
+          generatedImageUrl: null,
+          isLoading: false,
+          error: null,
+          tentativasRestantes: 0,
+          estampaId: null,
+          openLoginModal: false,
+          isPreview: false,
+          loginModalContext: null,
+          cacheEstampas: [],
+          openCacheModal: false,
+          estampaParaExcluir: null,
+          deviceFingerprint: null,
+          previewsGeradas: 0,
+          // Wizard Mode
+          advancedMode: true, // Start in advanced mode by default
+          wizardMode: false, // Internal wizard state (inverse of advancedMode)
+          wizardStep: 1,
+          wizard: {
+            style: null,
+            theme: null,
+            colors: 'verde_amarelo',
+            customDetails: ''
+          },
+          loginForm: {
+            email: '',
+            password: '',
+            nome: '',
+            telefone: '',
+            isRegister: false
+          },
+          
+          // Banco de dados de prompts por categoria
+          promptDatabase: {
+            familia: [
+              "Família brasileira unida vestindo verde e amarelo, abraçados, sorrindo, fundo com bandeira do Brasil",
+              "Pais e filhos com camisetas patrióticas, fazendo coração com as mãos, cores vibrantes do Brasil",
+              "Família reunida em churrasco, todos com acessórios verde e amarelo, clima festivo",
+              "Avós e netos juntos segurando mini bandeiras do Brasil, foto acolhedora e feliz",
+              "Família de três gerações vestida de verde e amarelo, pose alegre e descontraída",
+              "Crianças e pais pintando o rosto com as cores do Brasil, momento divertido",
+              "Família fazendo gesto de paz e amor, usando tons de verde, amarelo e azul",
+              "Irmãos abraçados com bandana do Brasil na cabeça, sorriso largo, fundo patriótico",
+              "Família em círculo de mãos dadas, visão de cima, formando coração verde e amarelo",
+              "Pais levantando filhos no ar, todos com roupas patrióticas, céu azul ao fundo",
+              "Família pulando juntos de alegria, vestindo verde e amarelo, movimento congelado",
+              "Grupo familiar grande com diferentes idades, todos usando acessórios do Brasil",
+              "Família fazendo piquenique com toalha verde e amarela, clima descontraído",
+              "Família fazendo pose de super-heróis todos juntos, capa verde e amarela voando",
+              "Crianças montadas nos ombros dos pais, todos vestidos de patriotas, alegria pura",
+              "Família em fila indiana, cada um segurando uma letra que forma BRASIL",
+              "Grupo familiar fazendo onda mexicana com as cores do Brasil",
+              "Família toda pintada de verde e amarelo, estilo torcida de Copa",
+              "Pais e filhos construindo castelo de areia com bandeira do Brasil no topo",
+              "Família correndo em câmera lenta com bandeira tremulando atrás",
+              "Todos deitados no chão formando estrela com os corpos, visão aérea",
+              "Família em volta de bolo decorado com Brasil, momento de celebração",
+              "Grupo completo usando óculos engraçados verde e amarelo, pose divertida",
+              "Família segurando placa 'Orgulho de ser brasileiro', cada um uma letra",
+              "Pais e filhos em trenzinho, seguindo bandeira do Brasil como locomotiva",
+              "Família inteira com perucas afro verde e amarela, humor e orgulho",
+              "Grupo fazendo yoga juntos, roupas patrióticas, harmonia e união",
+              "Família em pose de álbum de rock, atitude, verde e amarelo predominante",
+              "Todos segurando balões verde e amarelo voando, céu azul, liberdade",
+              "Família fazendo caras e bocas engraçadas, mood patriota divertido",
+              "Grupo em círculo visto de baixo para cima, todos olhando câmera",
+              "Família recreando pintura famosa brasileira, estilo artístico",
+              "Todos usando máscaras de super-heróis verde e amarelo",
+              "Família construindo pirâmide humana, bandeira do Brasil no topo",
+              "Grupo todo em pose de selfie, celular com case verde e amarelo",
+              "Família formando coração humano gigante, visão aérea, cores Brasil",
+              "Pais e filhos em competição de careta patriótica, hilário",
+              "Família inteira com bigode falso verde, humor brasileiro",
+              "Grupo fazendo dança sincronizada com lenços verde e amarelo",
+              "Família em pose de time de futebol, uniformes patrióticos",
+              "Todos abraçados em grupo apertado, close nos rostos sorrisos",
+              "Família segurando faixa 'Brasil no Coração', orgulhosos",
+              "Grupo inteiro usando cuecas/calcinhas sobre a roupa como super-heróis",
+              "Família em pose de poster de filme de ação brasileiro",
+              "Todos fazendo sombra chinesa verde e amarela na parede",
+              "Família recreando meme brasileiro famoso, humor nacional",
+              "Grupo com instrumentos musicais improvisados, samba patriota",
+              "Família fazendo macarena todos sincronizados, roupas Brasil",
+              "Todos em pose de dabbing com acessórios verde e amarelo",
+              "Família segurando pizza com cobertura verde e amarela, divertido"
+            ],
+            
+            sozinho: [
+              "Pessoa confiante posando com bandeira do Brasil nos ombros como capa de super-herói",
+              "Brasileiro sorridente fazendo sinal de joia, vestindo verde e amarelo, fundo patriótico",
+              "Retrato de orgulho nacional, pessoa com mão no coração, expressão determinada",
+              "Jovem brasileiro moderno com boné verde e amarelo, pose estilosa, fundo urbano",
+              "Pessoa fazendo coração com as mãos, dedos formando verde e amarelo, close-up",
+              "Brasileiro atlético em pose de vitória, punho erguido, cores da bandeira",
+              "Retrato artístico com iluminação verde e amarela projetada no rosto, dramático",
+              "Pessoa segurando bandeira do Brasil com orgulho, vento soprando, épico",
+              "Brasileiro sorridente com pintura facial verde e amarela, close-up expressivo",
+              "Pose confiante com braços cruzados, vestindo camisa verde com detalhes amarelos",
+              "Pessoa apontando para cima com esperança, fundo com estrelas e cores do Brasil",
+              "Retrato de perfil com cabelo verde e amarelo estilizado, moderno e artístico",
+              "Brasileiro fazendo gesto de paz, expressão serena, fundo com bandeira suave",
+              "Pessoa em pose de pensador de Rodin, mas com camisa do Brasil",
+              "Brasileiro fazendo yoga tree pose, equilíbrio, cores da bandeira",
+              "Retrato com sombra projetando silhueta da bandeira do Brasil",
+              "Pessoa segurando espelho que reflete verde e amarelo",
+              "Brasileiro em pose de modelo fashion, outfit patriótico estiloso",
+              "Retrato split screen: metade verde, metade amarelo, artístico",
+              "Pessoa com headphone verde e amarelo, curtindo música brasileira",
+              "Brasileiro fazendo dab com estilo, roupas patrióticas urbanas",
+              "Retrato com luz neon verde e amarela, vibe futurista",
+              "Pessoa usando óculos escuros refletindo bandeira do Brasil",
+              "Brasileiro em pose de super-herói pousando, dramático",
+              "Retrato com flores verde e amarelas formando moldura natural",
+              "Pessoa soprando confete verde e amarelo, momento mágico",
+              "Brasileiro em pose de meditação, paz e patriotismo",
+              "Retrato com cabelo esvoaçante verde e amarelo, dinâmico",
+              "Pessoa vestida de guerreiro com armadura verde e amarela",
+              "Brasileiro fazendo parkour com roupas patrióticas, ação",
+              "Retrato dupla exposição com paisagem brasileira sobreposta",
+              "Pessoa segurando guarda-chuva verde sob chuva de confete amarelo",
+              "Brasileiro em pose de boxeador, luvas verde e amarela",
+              "Retrato com maquiagem artística verde e amarela elaborada",
+              "Pessoa usando coroa de folhas verdes e flores amarelas",
+              "Brasileiro fazendo pose de skate trick, estilo urbano patriota",
+              "Retrato com tatuagem temporária da bandeira do Brasil",
+              "Pessoa em pose de dançarino de break, movimento congelado",
+              "Brasileiro vestido de anjo com asas verde e amarela",
+              "Retrato com efeito de partículas douradas e verdes voando",
+              "Pessoa em pose de leitura com livro sobre história do Brasil",
+              "Brasileiro fazendo pose de DJ com fones verde e amarelo",
+              "Retrato com holofote verde e amarelo em fundo escuro",
+              "Pessoa usando fantasia de Carnaval patriótica elaborada",
+              "Brasileiro em pose de skatista, board verde e amarelo",
+              "Retrato com expressão de determinação, olhar penetrante patriota",
+              "Pessoa segurando placa 'Made in Brazil' com orgulho",
+              "Brasileiro em pose de nadador olímpico, cores da bandeira",
+              "Retrato artístico preto e branco com splash verde e amarelo",
+              "Pessoa usando kimono verde com faixa amarela, marcial"
+            ],
+            
+            casal: [
+              "Casal brasileiro apaixonado se abraçando, vestindo verde e amarelo, pôr do sol",
+              "Namorados fazendo coração com as mãos juntas, cores patrióticas, romântico",
+              "Casal dançando juntos com lenços verde e amarelo, movimento e alegria",
+              "Dois corações batendo como um, casal de mãos dadas, bandeira do Brasil ao fundo",
+              "Casal se beijando com rosto pintado de verde e amarelo, momento apaixonado",
+              "Noivos brasileiros com grinalda verde e amarela, amor e patriotismo",
+              "Casal sentado abraçado assistindo jogo do Brasil, clima de torcida unida",
+              "Parceiros fazendo selfie juntos, ambos com camiseta da seleção, felizes",
+              "Casal maduro celebrando amor e Brasil, segurando bandeira juntos, cumplicidade",
+              "Dois abraçados de costas olhando horizonte verde e amarelo, poético",
+              "Casal pulando de alegria juntos, roupas patrióticas, sincronizados",
+              "Namorados fazendo piquenique romântico com toalha verde e amarela",
+              "Casal usando matching outfits verde e amarelo, pose moderna e estilosa",
+              "Casal dançando forró, roupas típicas com verde e amarelo",
+              "Namorados fazendo promessa de pinky, dedos pintados patriotas",
+              "Casal em pose de filme romântico, poster style Brasil",
+              "Dois compartilhando sorvete verde e amarelo, momento doce",
+              "Casal usando coroas de rei e rainha com joias verde-amarelas",
+              "Namorados desenhando coração na areia verde da praia",
+              "Casal em pose de tango, paixão e patriotismo",
+              "Dois fazendo bolha de sabão verde e amarela gigante",
+              "Casal vestido de noiva e noivo com tema Brasil completo",
+              "Namorados compartilhando fone de ouvido, cada um uma cor",
+              "Casal usando matching tattoos temporárias da bandeira",
+              "Dois fazendo chapéu humano, um em cima do outro, divertido",
+              "Casal em pose de valsa clássica, elegância patriótica",
+              "Namorados construindo coração com Lego verde e amarelo",
+              "Casal fazendo pose de yin-yang com corpos, cores Brasil",
+              "Dois segurando placa 'Amor Brasileiro' juntos",
+              "Casal em pose de super-heróis power couple, épico",
+              "Namorados fazendo sombra de coração com mãos, luz verde-amarela",
+              "Casal usando pijamas combinando com tema Brasil",
+              "Dois em pose de dança de salão, movimento elegante",
+              "Casal fazendo promessa de sempre, ritual verde e amarelo",
+              "Namorados segurando quebra-cabeça montado da bandeira",
+              "Casal em pose de bike, bicicleta decorada patriota",
+              "Dois fazendo toast com copos verde e amarelo, celebração",
+              "Casal usando máscaras venezianas patrióticas elegantes",
+              "Namorados em pose de Titanic na proa, verde e amarelo",
+              "Casal fazendo pintura corporal um no outro, arte",
+              "Dois em pose de acrobacia, confiança e equilíbrio",
+              "Casal usando perucas coloridas combinando verde e amarelo",
+              "Namorados segurando lanterna chinesa patriótica flutuando",
+              "Casal em pose de fotografo e modelo, profissional",
+              "Dois fazendo coração com pernas no ar, criativo",
+              "Casal vestido de príncipe e princesa brasileiros, conto de fadas",
+              "Namorados em pose de música ao vivo, duo patriota",
+              "Casal fazendo trança humana, interligados verde e amarelo",
+              "Dois em pose de esporte olímpico juntos, time Brasil",
+              "Casal usando capas de vampiro verde e amarela, Halloween brasileiro"
+            ],
+            
+            pet: [
+              "Cachorro usando bandana do Brasil, língua de fora, expressão alegre e fofa",
+              "Gato com laço verde e amarelo no pescoço, olhar curioso, fundo patriótico",
+              "Golden retriever segurando bandeirinha do Brasil na boca, foto adorável",
+              "Pet vestido com camisa verde e amarela, pose engraçada, clima festivo",
+              "Cachorro e dono combinando roupas patrióticas, abraço carinhoso",
+              "Gato preto e branco com olhos verdes, acessório amarelo, composição Brasil",
+              "Bulldog com boné do Brasil virado para trás, expressão séria e engraçada",
+              "Papagaio verde e amarelo em pose majestosa, cores naturais do Brasil",
+              "Cachorrinho pequeno dentro de chapéu verde e amarelo, fofo demais",
+              "Pet fazendo careta engraçada com pintura facial verde e amarela",
+              "Vários pets juntos, todos com acessórios do Brasil, caos organizado fofo",
+              "Cachorro grande protegendo bandeira do Brasil, pose de guardião leal",
+              "Gato laranja com gravata verde, olhar sofisticado, patriota felino",
+              "Cachorro usando óculos de sol verde com lente amarela, cool",
+              "Gato sentado dentro de caixa decorada com bandeira Brasil",
+              "Pet usando fantasia de super-herói verde e amarelo voando",
+              "Cachorro com chapéu de cowboy patriota, western brasileiro",
+              "Gato fazendo yoga pose, mat verde, ambiente zen brasileiro",
+              "Pet vestido de marinheiro com uniforme verde e amarelo",
+              "Cachorro segurando bola de futebol verde e amarela, jogador",
+              "Gato usando gravata borboleta patriótica, gentleman felino",
+              "Pet com orelhas de coelho verde decoradas, Páscoa Brasil",
+              "Cachorro usando capa de chuva amarela com botas verdes",
+              "Gato branco com coleira de pedras preciosas verde-amarela",
+              "Pet dormindo em cama bandeira do Brasil, adorável",
+              "Cachorro usando tutu verde com laço amarelo, bailarino",
+              "Gato preto com chapéu de bruxa verde, Halloween Brasil",
+              "Pet surfando em prancha verde e amarela, radical",
+              "Cachorro usando mochila escolar patriótica, estudante",
+              "Gato usando coroa dourada com detalhes verde, realeza",
+              "Pet com asa de anjo brancas e halo verde-amarelo",
+              "Cachorro vestido de chef com avental verde, cozinheiro",
+              "Gato usando smoking preto com gravata verde, elegante",
+              "Pet com chifres de rena verde e nariz amarelo, Natal",
+              "Cachorro usando kimono verde com faixa amarela, martial",
+              "Gato com bigode pintado de verde, engraçado",
+              "Pet usando capacete de astronauta verde, espacial",
+              "Cachorro com piercing falso verde na orelha, punk rock",
+              "Gato usando tiara de flores amarelas e verdes, primavera",
+              "Pet vestido de pirata com bandana verde, aventureiro",
+              "Cachorro usando camiseta regata patriótica, atlético",
+              "Gato com coleira de espinhos verde fluorescente, rocker",
+              "Pet usando boné de baseball virado, street style Brasil",
+              "Cachorro com tatuagem falsa de bandeira, bad boy fofo",
+              "Gato usando lenço de seda verde no pescoço, chique",
+              "Pet vestido de enfermeiro com uniforme verde, herói",
+              "Cachorro usando suspensórios verde com gravata amarela, formal",
+              "Gato com óculos de leitura redondos verdes, intelectual",
+              "Pet usando fantasia de dragão verde e amarelo, mítico",
+              "Cachorro com moicano verde estilo punk, rebelde"
+            ]
+          },
+          
+          // Estado do guia
+          guideState: {
+            currentStep: null,
+            selectedPersona: null,
+            currentPromptIndex: 0,
+            bubbleVisible: false
+          },
+          
+          // Prompt para modo avançado
+          advancedPrompt: ''
+        },
+        
+        // Products Data
+        products: [
+          {
+            id: 1,
+            name: 'Camiseta Brasil Acima de Tudo',
+            price: 89.90,
+            image: 'public/product-1.jpg',
+            badge: 'MAIS VENDIDO',
+            selectedSize: 'M',
+            quantity: 1
+          },
+          {
+            id: 2,
+            name: 'Camiseta Águia Brasileira',
+            price: 99.90,
+            image: 'public/product-2.jpg',
+            badge: 'NOVO',
+            selectedSize: 'M',
+            quantity: 1
+          },
+          {
+            id: 3,
+            name: 'Camiseta Deus Família Pátria',
+            price: 94.90,
+            image: 'public/product-3.jpg',
+            badge: null,
+            selectedSize: 'M',
+            quantity: 1
+          },
+          {
+            id: 4,
+            name: 'Camiseta Ordem e Progresso',
+            price: 89.90,
+            image: 'public/product-4.jpg',
+            badge: null,
+            selectedSize: 'M',
+            quantity: 1
+          },
+          {
+            id: 5,
+            name: 'Camiseta Brasão da República',
+            price: 109.90,
+            image: 'public/product-5.jpg',
+            badge: 'EDIÇÃO LIMITADA',
+            selectedSize: 'M',
+            quantity: 1
+          },
+          {
+            id: 6,
+            name: 'Camiseta Liberdade ou Morte',
+            price: 99.90,
+            image: 'public/product-6.jpg',
+            badge: null,
+            selectedSize: 'M',
+            quantity: 1
+          },
+          {
+            id: 7,
+            name: 'Camiseta Fé no Brasil',
+            price: 89.90,
+            image: 'public/product-7.jpg',
+            badge: null,
+            selectedSize: 'M',
+            quantity: 1
+          },
+          {
+            id: 8,
+            name: 'Camiseta Amor Patriótico',
+            price: 84.90,
+            image: 'public/product-8.jpg',
+            badge: 'PROMOÇÃO',
+            selectedSize: 'M',
+            quantity: 1
+          }
+        ],
+        
+        // Carousel Products
+        carouselProducts: [
+          { id: 1, name: 'Brasil Acima de Tudo', price: 89.90, image: 'public/product-1.jpg' },
+          { id: 2, name: 'Águia Brasileira', price: 99.90, image: 'public/product-2.jpg' },
+          { id: 3, name: 'Deus Família Pátria', price: 94.90, image: 'public/product-3.jpg' },
+          { id: 4, name: 'Ordem e Progresso', price: 89.90, image: 'public/product-4.jpg' },
+          { id: 5, name: 'Brasão da República', price: 109.90, image: 'public/product-5.jpg' },
+          { id: 6, name: 'Liberdade ou Morte', price: 99.90, image: 'public/product-6.jpg' },
+          { id: 7, name: 'Fé no Brasil', price: 89.90, image: 'public/product-7.jpg' },
+          { id: 8, name: 'Amor Patriótico', price: 84.90, image: 'public/product-8.jpg' },
+          { id: 9, name: 'Brasil Grande Novamente', price: 94.90, image: 'public/product-9.jpg' },
+          { id: 10, name: 'Independência ou Morte', price: 129.90, image: 'public/product-10.jpg' }
+        ],
+        
+        // Testimonials
+        testimonials: [
+          {
+            name: 'Carlos Silva',
+            avatar: 'public/avatar-1.jpg',
+            text: 'Qualidade incrível! A camiseta é super confortável e a estampa não desbota. Já comprei 3 diferentes!'
+          },
+          {
+            name: 'Mariana Costa',
+            avatar: 'public/avatar-2.jpg',
+            text: 'Entrega rápida e atendimento excelente. Minha família toda agora usa BRAVOS BRASIL!'
+          },
+          {
+            name: 'Roberto Mendes',
+            avatar: 'public/avatar-3.jpg',
+            text: 'Finalmente uma marca que representa nossos valores. Produto de primeira qualidade!'
+          },
+          {
+            name: 'Ana Paula Souza',
+            avatar: 'public/avatar-4.jpg',
+            text: 'Ameiiii! Tecido macio, costura perfeita. Super recomendo para todos os patriotas!'
+          },
+          {
+            name: 'Lucas Oliveira',
+            avatar: 'public/avatar-5.jpg',
+            text: 'Comprei para presentear meu pai e ele adorou. Já vou fazer mais pedidos!'
+          },
+          {
+            name: 'Cristina Lima',
+            avatar: 'public/avatar-6.jpg',
+            text: 'Excelente custo-benefício. Camisetas lindas e com significado. Parabéns!'
+          }
+        ],
+        
+        // FAQs
+        faqs: [
+          {
+            question: 'Quais são os tamanhos disponíveis?',
+            answer: 'Trabalhamos com os tamanhos P, M, G e GG. Nossas camisetas têm caimento regular. Consulte nossa tabela de medidas na página do produto para escolher o tamanho ideal.',
+            open: false
+          },
+          {
+            question: 'Qual o prazo de entrega?',
+            answer: 'O prazo de entrega varia de acordo com sua localização. Para capitais e regiões metropolitanas, em média 3-7 dias úteis. Para demais localidades, 7-15 dias úteis. Você recebe o código de rastreamento por e-mail.',
+            open: false
+          },
+          {
+            question: 'Quais as formas de pagamento?',
+            answer: 'Aceitamos Pix (com 5% de desconto), cartões de crédito em até 12x, cartões de débito e boleto bancário. Todas as transações são seguras e criptografadas.',
+            open: false
+          },
+          {
+            question: 'Posso trocar ou devolver?',
+            answer: 'Sim! Você tem até 7 dias após o recebimento para solicitar a devolução, conforme o Código de Defesa do Consumidor. Para trocas por tamanho, o prazo é de 30 dias. O produto deve estar sem uso e com as etiquetas.',
+            open: false
+          },
+          {
+            question: 'O tecido é de boa qualidade?',
+            answer: 'Sim! Usamos 100% algodão premium de alta gramatura (180g/m²), que proporciona maior durabilidade e conforto. Nossas estampas são em silk screen de alta qualidade, resistentes a lavagens.',
+            open: false
+          },
+          {
+            question: 'Vocês enviam para todo o Brasil?',
+            answer: 'Sim! Enviamos para todos os estados brasileiros. O frete é GRÁTIS para compras acima de R$ 199,00. Para valores abaixo, o custo do frete é calculado no checkout.',
+            open: false
+          }
+        ],
+        
+        // Computed
+        get cartCount() {
+          return this.cart.reduce((total, item) => total + item.quantity, 0);
+        },
+        
+        get cartTotal() {
+          return this.cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+        },
+        
+        // Methods
+        initApp() {
+          // Load cart from localStorage
+          const savedCart = localStorage.getItem('bravosbrasil_cart');
+          if (savedCart) {
+            this.cart = JSON.parse(savedCart);
+          }
+          
+          // Load dark mode preference
+          const savedDarkMode = localStorage.getItem('bravosbrasil_darkmode');
+          if (savedDarkMode) {
+            this.darkMode = JSON.parse(savedDarkMode);
+            // Apply to html tag
+            if (this.darkMode) {
+              document.documentElement.classList.add('dark');
+            } else {
+              document.documentElement.classList.remove('dark');
+            }
+          }
+          
+          // Load stamp cache
+          this.loadStampCache();
+          
+          // Initialize device fingerprint and preview tracking
+          this.initializeDeviceTracking();
+          
+          // Scroll listener for navbar
+          window.addEventListener('scroll', () => {
+            this.scrolled = window.scrollY > 50;
+          });
+          
+          // Initialize AOS
+          AOS.init({
+            duration: 800,
+            once: true,
+            offset: 100
+          });
+          
+          // Initialize Swiper
+          this.$nextTick(() => {
+            new Swiper('.productSwiper', {
+              slidesPerView: 1,
+              spaceBetween: 20,
+              loop: true,
+              autoplay: {
+                delay: 3000,
+                disableOnInteraction: false,
+              },
+              pagination: {
+                el: '.swiper-pagination',
+                clickable: true,
+              },
+              breakpoints: {
+                640: {
+                  slidesPerView: 2,
+                },
+                768: {
+                  slidesPerView: 3,
+                },
+                1024: {
+                  slidesPerView: 4,
+                },
+              },
+            });
+          });
+          
+          // Check authentication
+          this.checkAuth();
+          
+          // Watch tentativasRestantes for notifications
+          this.$watch('geradorEstampas.tentativasRestantes', (newValue, oldValue) => {
+            if (oldValue !== undefined && newValue < oldValue && newValue > 0) {
+              if (newValue <= 2) {
+                this.showToast(`⚠️ Atenção! Restam apenas ${newValue} estampas`, 'warning');
+              } else if (newValue === 5) {
+                this.showToast(`🔔 Você tem ${newValue} estampas restantes`, 'info');
+              }
+            }
+            
+            if (newValue === 0 && oldValue !== undefined && oldValue > 0) {
+              this.showToast('🚫 Suas estampas acabaram! Compre uma camisa para ganhar +10', 'error');
+            }
+          });
+          
+        },
+        
+        scrollTo(id) {
+          const element = document.getElementById(id);
+          if (element) {
+            const offset = 80;
+            const elementPosition = element.getBoundingClientRect().top;
+            const offsetPosition = elementPosition + window.pageYOffset - offset;
+            
+            window.scrollTo({
+              top: offsetPosition,
+              behavior: 'smooth'
+            });
+          }
+        },
+        
+        // Social Proof Control
+        pauseSocialProof() {
+          const proofComponent = document.querySelector('[x-data*="socialProof"]');
+          if (proofComponent && proofComponent.__x) {
+            proofComponent.__x.$data.stopNotifications();
+          }
+        },
+        
+        resumeSocialProof() {
+          const proofComponent = document.querySelector('[x-data*="socialProof"]');
+          if (proofComponent && proofComponent.__x) {
+            proofComponent.__x.$data.startNotifications();
+          }
+        },
+        
+        toggleDarkMode() {
+          this.darkMode = !this.darkMode;
+          localStorage.setItem('bravosbrasil_darkmode', JSON.stringify(this.darkMode));
+          // Apply to html tag
+          if (this.darkMode) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        },
+        
+        addToCart(product) {
+          const existingItem = this.cart.find(
+            item => item.id === product.id && item.size === product.selectedSize
+          );
+          
+          if (existingItem) {
+            existingItem.quantity += product.quantity;
+          } else {
+            this.cart.push({
+              id: product.id,
+              name: product.name,
+              price: product.price,
+              image: product.image,
+              size: product.selectedSize,
+              quantity: product.quantity
+            });
+          }
+          
+          this.saveCart();
+          this.showToast('Produto adicionado ao carrinho!', 'success');
+          
+          // Reset quantity
+          product.quantity = 1;
+        },
+        
+        removeFromCart(index) {
+          this.cart.splice(index, 1);
+          this.saveCart();
+          this.showToast('Produto removido do carrinho', 'success');
+        },
+        
+        updateQuantity(index, change) {
+          const item = this.cart[index];
+          const newQuantity = item.quantity + change;
+          
+          if (newQuantity > 0) {
+            item.quantity = newQuantity;
+            this.saveCart();
+          }
+        },
+        
+        saveCart() {
+          localStorage.setItem('bravosbrasil_cart', JSON.stringify(this.cart));
+        },
+        
+        toggleFaq(index) {
+          this.faqs[index].open = !this.faqs[index].open;
+        },
+        
+        showToast(message, type = 'success') {
+          this.toast.message = message;
+          this.toast.type = type;
+          this.toast.show = true;
+          
+          setTimeout(() => {
+            this.toast.show = false;
+          }, 3000);
+        },
+        
+        async subscribeNewsletter() {
+          try {
+            const response = await fetch('/api/leads', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                nome: this.newsletter.name,
+                email: this.newsletter.email,
+                telefone: this.newsletter.phone,
+                origem: 'newsletter'
+              })
+            });
+            
+            if (response.ok) {
+              this.newsletter = { name: '', email: '', phone: '' };
+              this.showToast('Cadastro realizado com sucesso!', 'success');
+            } else {
+              this.showToast('Erro ao cadastrar. Tente novamente.', 'error');
+            }
+          } catch (error) {
+            console.error('Erro ao cadastrar newsletter:', error);
+            this.showToast('Erro ao cadastrar. Tente novamente.', 'error');
+          }
+        },
+        
+        async fetchAddress() {
+          const cep = this.checkout.cep.replace(/\D/g, '');
+          if (cep.length === 8) {
+            try {
+              const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+              const data = await response.json();
+              
+              if (!data.erro) {
+                this.checkout.address = data.logradouro;
+                this.checkout.neighborhood = data.bairro;
+                this.checkout.city = data.localidade;
+                this.checkout.state = data.uf;
+              }
+            } catch (error) {
+              console.error('Erro ao buscar CEP:', error);
+            }
+          }
+        },
+        
+        async finalizePurchase() {
+          if (!this.auth.isAuthenticated) {
+            this.geradorEstampas.openLoginModal = true;
+            this.showToast('Faça login para finalizar a compra', 'error');
+            return;
+          }
+
+          try {
+            // Preparar itens para Mercado Pago
+            const items = this.cart.map(item => ({
+              name: item.name,
+              price: item.price,
+              quantity: item.quantity,
+              image: item.image || item.customDesign || ''
+            }));
+
+            // Criar preferência de pagamento
+            const response = await fetch('/api/payment/create', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${this.auth.token}`
+              },
+              body: JSON.stringify({ items })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+              // Redirecionar para Mercado Pago
+              const initPoint = data.init_point || data.sandbox_init_point;
+              if (initPoint) {
+                window.location.href = initPoint;
+              } else {
+                throw new Error('URL de pagamento não disponível');
+              }
+            } else {
+              this.showToast(data.error || 'Erro ao processar pagamento', 'error');
+            }
+          } catch (error) {
+            console.error('Erro ao finalizar compra:', error);
+            this.showToast('Erro ao processar pagamento. Tente novamente.', 'error');
+          }
+        },
+        
+        // Authentication Methods
+        async checkAuth() {
+          const token = localStorage.getItem('bravosbrasil_token');
+          if (token) {
+            this.auth.token = token;
+            try {
+              const response = await fetch('/api/auth/me', {
+                headers: {
+                  'Authorization': `Bearer ${token}`
+                }
+              });
+              if (response.ok) {
+                const data = await response.json();
+                this.auth.user = data.user;
+                this.auth.isAuthenticated = true;
+                await this.checkTentativas();
+                // Recarregar cache após autenticação
+                this.loadStampCache();
+              } else {
+                this.logout();
+              }
+            } catch (error) {
+              console.error('Erro ao verificar autenticação:', error);
+            }
+          }
+        },
+        
+        async login() {
+          try {
+            const endpoint = this.geradorEstampas.loginForm.isRegister ? '/api/auth/register' : '/api/auth/login';
+            const body = this.geradorEstampas.loginForm.isRegister 
+              ? {
+                  email: this.geradorEstampas.loginForm.email,
+                  password: this.geradorEstampas.loginForm.password,
+                  nome: this.geradorEstampas.loginForm.nome,
+                  telefone: this.geradorEstampas.loginForm.telefone
+                }
+              : {
+                  email: this.geradorEstampas.loginForm.email,
+                  password: this.geradorEstampas.loginForm.password
+                };
+            
+            const response = await fetch(endpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body)
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+              this.auth.token = data.token;
+              this.auth.user = data.user;
+              this.auth.isAuthenticated = true;
+              localStorage.setItem('bravosbrasil_token', data.token);
+              this.geradorEstampas.tentativasRestantes = data.user.tentativas_restantes;
+              // Recarregar cache após login
+              this.loadStampCache();
+              
+              // NEW: Handle post-login actions
+              const wasSavingStamp = this.geradorEstampas.loginModalContext === 'save_stamp' && this.geradorEstampas.isPreview;
+              
+              if (wasSavingStamp) {
+                // Convert preview to saved stamp
+                this.geradorEstampas.isPreview = false;
+                
+                // Save stamp (call API)
+                try {
+                  let imagePayload = null;
+                  if (this.geradorEstampas.imageFile) {
+                    imagePayload = await this.fileToBase64(this.geradorEstampas.imageFile);
+                  }
+                  
+                  const saveResponse = await fetch('/api/stamps/generate', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${this.auth.token}`
+                    },
+              body: JSON.stringify({
+                prompt: (this.geradorEstampas.prompt || '').substring(0, 500), // Garantir máximo de 500 caracteres
+                image: imagePayload
+              })
+                  });
+                  
+                  const saveData = await saveResponse.json();
+                  
+                  if (saveResponse.ok) {
+                    this.geradorEstampas.generatedImageUrl = saveData.imageUrl;
+                    this.geradorEstampas.tentativasRestantes = saveData.tentativas_restantes;
+                    this.geradorEstampas.estampaId = saveData.estampa_id;
+                    
+                    // Salvar no cache
+                    this.saveStampToCache({
+                      id: saveData.estampa_id,
+                      imageUrl: saveData.imageUrl,
+                      prompt: this.geradorEstampas.prompt,
+                      timestamp: Date.now()
+                    });
+                    
+                    // Auto-add to cart
+                    await this.addToCartWithStamp();
+                    
+                    this.showToast('✅ Estampa salva e adicionada ao carrinho!', 'success');
+                  } else {
+                    this.showToast('Erro ao salvar estampa', 'error');
+                  }
+                } catch (error) {
+                  console.error('Erro ao salvar estampa:', error);
+                  this.showToast('Erro ao salvar estampa', 'error');
+                }
+              }
+              
+              this.geradorEstampas.openLoginModal = false;
+              this.geradorEstampas.loginModalContext = null;
+              
+              if (!wasSavingStamp) {
+                this.showToast('Login realizado com sucesso!', 'success');
+              }
+            } else {
+              this.showToast(data.error || 'Erro ao fazer login', 'error');
+            }
+          } catch (error) {
+            console.error('Erro no login:', error);
+            this.showToast('Erro ao fazer login. Tente novamente.', 'error');
+          }
+        },
+        
+        logout() {
+          this.auth.token = null;
+          this.auth.user = null;
+          this.auth.isAuthenticated = false;
+          this.geradorEstampas.tentativasRestantes = 0;
+          this.geradorEstampas.cacheEstampas = [];
+          localStorage.removeItem('bravosbrasil_token');
+          this.showToast('Logout realizado', 'success');
+        },
+        
+        // Gerador de Estampas Methods
+        async checkTentativas() {
+          if (!this.auth.isAuthenticated) return;
+          
+          try {
+            const response = await fetch('/api/stamps/remaining', {
+              headers: {
+                'Authorization': `Bearer ${this.auth.token}`
+              }
+            });
+            
+            if (response.ok) {
+              const data = await response.json();
+              this.geradorEstampas.tentativasRestantes = data.tentativas_restantes;
+            }
+          } catch (error) {
+            console.error('Erro ao verificar tentativas:', error);
+          }
+        },
+        
+        // Cache Management
+        loadStampCache() {
+          try {
+            const userId = this.auth.user?.id || 'guest';
+            const cacheKey = `bravosbrasil_stamp_cache_${userId}`;
+            const savedCache = localStorage.getItem(cacheKey);
+            if (savedCache) {
+              this.geradorEstampas.cacheEstampas = JSON.parse(savedCache);
+            } else {
+              this.geradorEstampas.cacheEstampas = [];
+            }
+          } catch (error) {
+            console.error('Erro ao carregar cache:', error);
+            this.geradorEstampas.cacheEstampas = [];
+          }
+        },
+        
+        saveStampToCache(estampa) {
+          try {
+            const userId = this.auth.user?.id || 'guest';
+            const cacheKey = `bravosbrasil_stamp_cache_${userId}`;
+            
+            // Adiciona timestamp se não tiver
+            if (!estampa.timestamp) {
+              estampa.timestamp = Date.now();
+            }
+            if (!estampa.id) {
+              estampa.id = 'cache_' + Date.now();
+            }
+            
+            this.geradorEstampas.cacheEstampas.push(estampa);
+            localStorage.setItem(cacheKey, JSON.stringify(this.geradorEstampas.cacheEstampas));
+          } catch (error) {
+            console.error('Erro ao salvar no cache:', error);
+          }
+        },
+        
+        removeStampFromCache(estampaId) {
+          try {
+            const userId = this.auth.user?.id || 'guest';
+            const cacheKey = `bravosbrasil_stamp_cache_${userId}`;
+            
+            this.geradorEstampas.cacheEstampas = this.geradorEstampas.cacheEstampas.filter(
+              e => e.id !== estampaId
+            );
+            localStorage.setItem(cacheKey, JSON.stringify(this.geradorEstampas.cacheEstampas));
+          } catch (error) {
+            console.error('Erro ao remover do cache:', error);
+          }
+        },
+        
+        getCacheCount() {
+          return this.geradorEstampas.cacheEstampas.length;
+        },
+        
+        checkCacheLimit() {
+          return this.getCacheCount() >= 10;
+        },
+        
+        confirmDeleteAndGenerate(estampaId) {
+          if (!estampaId) {
+            this.showToast('Selecione uma estampa para excluir', 'error');
+            return;
+          }
+          this.removeStampFromCache(estampaId);
+          this.geradorEstampas.openCacheModal = false;
+          this.geradorEstampas.estampaParaExcluir = null;
+          // Continua com a geração
+          this.generateStampInternal();
+        },
+        
+        cancelCacheModal() {
+          this.geradorEstampas.openCacheModal = false;
+          this.geradorEstampas.estampaParaExcluir = null;
+        },
+        
+        // Device Tracking (Prevent multiple previews from same device)
+        generateDeviceFingerprint() {
+          try {
+            const components = [];
+            
+            // User Agent
+            components.push(navigator.userAgent || '');
+            
+            // Screen Resolution
+            components.push(`${screen.width}x${screen.height}`);
+            components.push(`${screen.availWidth}x${screen.availHeight}`);
+            
+            // Color Depth
+            components.push(screen.colorDepth || '');
+            
+            // Timezone
+            components.push(Intl.DateTimeFormat().resolvedOptions().timeZone || '');
+            
+            // Language
+            components.push(navigator.language || '');
+            components.push(navigator.languages?.join(',') || '');
+            
+            // Platform
+            components.push(navigator.platform || '');
+            
+            // Hardware Concurrency
+            components.push(navigator.hardwareConcurrency || '');
+            
+            // Canvas Fingerprint (more reliable)
+            try {
+              const canvas = document.createElement('canvas');
+              canvas.width = 200;
+              canvas.height = 50;
+              const ctx = canvas.getContext('2d');
+              ctx.textBaseline = 'top';
+              ctx.font = '14px Arial';
+              ctx.fillStyle = '#f60';
+              ctx.fillRect(125, 1, 62, 20);
+              ctx.fillStyle = '#069';
+              ctx.fillText('BRAVOS-BRASIL-FP', 2, 15);
+              ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
+              ctx.fillText('BRAVOS-BRASIL-FP', 4, 17);
+              components.push(canvas.toDataURL());
+            } catch (e) {
+              components.push('canvas-error');
+            }
+            
+            // WebGL Fingerprint
+            try {
+              const gl = document.createElement('canvas').getContext('webgl');
+              if (gl) {
+                const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                if (debugInfo) {
+                  components.push(gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL));
+                  components.push(gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL));
+                }
+              }
+            } catch (e) {
+              components.push('webgl-error');
+            }
+            
+            // Combine all components and create hash
+            const fingerprintString = components.join('|');
+            
+            // Simple hash function
+            let hash = 0;
+            for (let i = 0; i < fingerprintString.length; i++) {
+              const char = fingerprintString.charCodeAt(i);
+              hash = ((hash << 5) - hash) + char;
+              hash = hash & hash; // Convert to 32bit integer
+            }
+            
+            return Math.abs(hash).toString(36);
+          } catch (error) {
+            console.error('Erro ao gerar fingerprint:', error);
+            // Fallback: use timestamp + random
+            return 'fp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+          }
+        },
+        
+        initializeDeviceTracking() {
+          try {
+            // Generate fingerprint (always generate fresh to ensure consistency)
+            const fingerprint = this.generateDeviceFingerprint();
+            this.geradorEstampas.deviceFingerprint = fingerprint;
+            
+            // Load preview count from localStorage
+            const storageKey = `bravosbrasil_previews_${fingerprint}`;
+            const savedData = localStorage.getItem(storageKey);
+            
+            if (savedData) {
+              try {
+                const data = JSON.parse(savedData);
+                this.geradorEstampas.previewsGeradas = data.count || 0;
+                
+                // Check if data is too old (optional: reset after 24h)
+                // Descomente as linhas abaixo se quiser resetar após 24h
+                // const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
+                // if (data.timestamp && data.timestamp < oneDayAgo) {
+                //   this.geradorEstampas.previewsGeradas = 0;
+                //   localStorage.setItem(storageKey, JSON.stringify({ count: 0, timestamp: Date.now() }));
+                // }
+              } catch (e) {
+                // Se houver erro ao parsear, resetar
+                this.geradorEstampas.previewsGeradas = 0;
+              }
+            } else {
+              this.geradorEstampas.previewsGeradas = 0;
+            }
+          } catch (error) {
+            console.error('Erro ao inicializar tracking:', error);
+            this.geradorEstampas.previewsGeradas = 0;
+            // Tentar gerar fingerprint de fallback
+            try {
+              this.geradorEstampas.deviceFingerprint = 'fp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            } catch (e) {
+              this.geradorEstampas.deviceFingerprint = 'fp_error';
+            }
+          }
+        },
+        
+        checkPreviewLimit() {
+          // Limite de 1 preview por dispositivo (pode ajustar se necessário)
+          const MAX_PREVIEWS = 1;
+          return this.geradorEstampas.previewsGeradas >= MAX_PREVIEWS;
+        },
+        
+        incrementPreviewCount() {
+          try {
+            const fingerprint = this.geradorEstampas.deviceFingerprint || this.generateDeviceFingerprint();
+            this.geradorEstampas.deviceFingerprint = fingerprint;
+            
+            this.geradorEstampas.previewsGeradas = (this.geradorEstampas.previewsGeradas || 0) + 1;
+            
+            // Save to localStorage
+            const storageKey = `bravosbrasil_previews_${fingerprint}`;
+            localStorage.setItem(storageKey, JSON.stringify({
+              count: this.geradorEstampas.previewsGeradas,
+              timestamp: Date.now()
+            }));
+          } catch (error) {
+            console.error('Erro ao incrementar contador:', error);
+          }
+        },
+        
+        handleFileUpload(event) {
+          const files = event.target.files;
+          
+          // Limitar a apenas 1 arquivo
+          if (files.length > 1) {
+            this.showToast('⚠️ Apenas 1 imagem por vez é permitida. A primeira imagem será usada.', 'warning');
+          }
+          
+          const file = files[0];
+          if (file) {
+            // Validar tamanho (opcional: 5MB)
+            const maxSize = 5 * 1024 * 1024; // 5MB
+            if (file.size > maxSize) {
+              this.showToast('⚠️ A imagem é muito grande. Use uma imagem menor que 5MB.', 'error');
+              event.target.value = ''; // Limpar input
+              return;
+            }
+            
+            this.geradorEstampas.imageFile = file;
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              this.geradorEstampas.imagePreview = reader.result;
+            };
+            reader.readAsDataURL(file);
+          }
+          
+          // Limpar input para permitir selecionar o mesmo arquivo novamente se necessário
+          event.target.value = '';
+        },
+        
+        clearImage() {
+          this.geradorEstampas.imageFile = null;
+          this.geradorEstampas.imagePreview = null;
+        },
+        
+        fileToBase64(file) {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const result = reader.result;
+              const base64Data = result.split(',')[1];
+              resolve({ data: base64Data, mimeType: file.type });
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+        },
+        
+        async generateStamp() {
+          // Verificar limite de cache ANTES de gerar (apenas para usuários autenticados)
+          if (this.auth.isAuthenticated && this.checkCacheLimit()) {
+            // Cache cheio (10 estampas), mostrar modal para excluir uma
+            this.geradorEstampas.openCacheModal = true;
+            return;
+          }
+          
+          // Se não está no limite, prosseguir com a geração
+          await this.generateStampInternal();
+        },
+        
+        async generateStampInternal() {
+          // LAZY LOGIN: Allow generation without authentication (preview mode)
+          const isPreview = !this.auth.isAuthenticated;
+          
+          if (isPreview) {
+            // Verificar limite de previews por dispositivo
+            if (this.checkPreviewLimit()) {
+              this.showToast('⚠️ Você já gerou uma prévia neste dispositivo. Faça login para continuar gerando estampas!', 'warning');
+              this.geradorEstampas.openLoginModal = true;
+              this.geradorEstampas.loginModalContext = 'preview_limit';
+              return;
+            }
+            
+            // Client-side preview generation (placeholder)
+            this.geradorEstampas.isLoading = true;
+            this.geradorEstampas.error = null;
+            this.geradorEstampas.generatedImageUrl = null;
+            
+            // Incrementar contador de previews ANTES de gerar
+            this.incrementPreviewCount();
+            
+            // Simulate API delay
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Generate placeholder image with canvas (green/yellow gradient + text)
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024;
+            canvas.height = 1024;
+            const ctx = canvas.getContext('2d');
+            
+            // Gradient background (Brasil colors)
+            const gradient = ctx.createLinearGradient(0, 0, 0, 1024);
+            gradient.addColorStop(0, '#00843D');
+            gradient.addColorStop(0.5, '#009c4a');
+            gradient.addColorStop(1, '#FFCC29');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 1024, 1024);
+            
+            // Add text
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 60px "Bebas Neue", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('BRAVOS BRASIL', 512, 100);
+            
+            ctx.font = '36px Arial';
+            ctx.fillStyle = '#FFCC29';
+            const promptText = this.geradorEstampas.prompt || 'ESTAMPA COM IDENTIDADE NACIONAL';
+            const words = promptText.split(' ');
+            let line = '';
+            let y = 512;
+            
+            words.forEach(word => {
+              const testLine = line + word + ' ';
+              if (ctx.measureText(testLine).width > 900 && line.length > 0) {
+                ctx.fillText(line, 512, y);
+                line = word + ' ';
+                y += 45;
+              } else {
+                line = testLine;
+              }
+            });
+            ctx.fillText(line, 512, y);
+            
+            // Set preview result
+            this.geradorEstampas.generatedImageUrl = canvas.toDataURL('image/png');
+            this.geradorEstampas.isPreview = true;
+            this.geradorEstampas.isLoading = false;
+            
+            // Show warning toast (Portuguese-BR)
+            this.showToast('⚠️ Esta é uma prévia. Faça login para salvar e adicionar ao carrinho', 'warning');
+            
+            return;
+          }
+          
+          // Authenticated generation (existing logic)
+          if (this.geradorEstampas.tentativasRestantes <= 0) {
+            this.showToast('⚠️ Você esgotou suas estampas! Faça uma compra para ganhar mais 10 estampas grátis.', 'error');
+            return;
+          }
+          
+          this.geradorEstampas.isLoading = true;
+          this.geradorEstampas.error = null;
+          this.geradorEstampas.generatedImageUrl = null;
+          this.geradorEstampas.isPreview = false;
+          
+          try {
+            let imagePayload = null;
+            if (this.geradorEstampas.imageFile) {
+              imagePayload = await this.fileToBase64(this.geradorEstampas.imageFile);
+            }
+            
+            // Validar e limitar prompt a 500 caracteres
+            const promptLimitado = (this.geradorEstampas.prompt || '').substring(0, 500);
+            
+            const response = await fetch('/api/stamps/generate', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${this.auth.token}`
+              },
+              body: JSON.stringify({
+                prompt: promptLimitado,
+                image: imagePayload
+              })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+              this.geradorEstampas.generatedImageUrl = data.imageUrl;
+              // Animate before updating tentativas
+              setTimeout(() => {
+                this.geradorEstampas.tentativasRestantes = data.tentativas_restantes;
+              }, 300);
+              this.geradorEstampas.estampaId = data.estampa_id;
+              this.geradorEstampas.isPreview = false;
+              
+              // Salvar no cache
+              this.saveStampToCache({
+                id: data.estampa_id,
+                imageUrl: data.imageUrl,
+                prompt: this.geradorEstampas.prompt,
+                timestamp: Date.now()
+              });
+              
+              this.showToast('🎉 Sua estampa está pronta!', 'success');
+            } else {
+              this.geradorEstampas.error = data.error || '⚠️ Não conseguimos gerar agora. Verifique sua conexão e tente novamente.';
+              this.showToast('⚠️ Não conseguimos gerar agora. Verifique sua conexão e tente novamente.', 'error');
+            }
+          } catch (error) {
+            console.error('Erro ao gerar estampa:', error);
+            this.geradorEstampas.error = '⚠️ Não conseguimos gerar agora. Verifique sua conexão e tente novamente.';
+            this.showToast('⚠️ Não conseguimos gerar agora. Verifique sua conexão e tente novamente.', 'error');
+          } finally {
+            this.geradorEstampas.isLoading = false;
+          }
+        },
+        
+        async addToCartWithStamp() {
+          if (!this.geradorEstampas.generatedImageUrl) {
+            this.showToast('Gere uma estampa primeiro!', 'error');
+            return;
+          }
+          
+          // NEW: Check if it's a preview
+          if (this.geradorEstampas.isPreview) {
+            // Open login modal with persuasive context
+            this.geradorEstampas.loginModalContext = 'save_stamp';
+            this.geradorEstampas.openLoginModal = true;
+            return;
+          }
+          
+          const customProduct = {
+            id: 'custom-' + Date.now(),
+            name: 'Camiseta Personalizada - ' + (this.geradorEstampas.prompt || 'Estampa Personalizada'),
+            price: 99.90,
+            image: this.geradorEstampas.generatedImageUrl,
+            size: 'M',
+            quantity: 1,
+            isCustom: true,
+            customDesign: this.geradorEstampas.generatedImageUrl,
+            estampaId: this.geradorEstampas.estampaId
+          };
+          
+          // Atualizar status da estampa no backend
+          if (this.geradorEstampas.estampaId && this.auth.token) {
+            try {
+              await fetch('/api/stamps/update-status', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${this.auth.token}`
+                },
+                body: JSON.stringify({ 
+                  estampaId: this.geradorEstampas.estampaId,
+                  status: 'no_carrinho' 
+                })
+              });
+            } catch (error) {
+              console.error('Erro ao atualizar status da estampa:', error);
+            }
+          }
+          
+          this.addToCart(customProduct);
+          this.showToast('Estampa adicionada ao carrinho!', 'success');
+        },
+        
+        // Wizard Mode Methods
+        buildWizardPrompt() {
+          const wizard = this.geradorEstampas.wizard;
+          
+          if (!wizard.style || !wizard.theme) {
+            return 'Selecione o estilo e tema acima para ver o prompt...';
+          }
+          
+          // Style descriptions
+          const styleMap = {
+            minimalista: 'estilo minimalista e clean',
+            realista: 'estilo foto-realista e detalhado',
+            ilustracao: 'estilo ilustração desenhada à mão',
+            vintage: 'estilo vintage retrô anos 80',
+            abstrato: 'estilo abstrato com formas geométricas',
+            aquarela: 'estilo aquarela pintada',
+            graffiti: 'estilo graffiti street art urbano',
+            pixel: 'estilo pixel art 8-bit retrô'
+          };
+          
+          // Theme descriptions
+          const themeMap = {
+            bandeira: 'bandeira do Brasil com destaque',
+            aguia: 'águia brasileira majestosa em voo',
+            cristo: 'Cristo Redentor monumental',
+            amazonia: 'floresta amazônica exuberante',
+            ordem: 'frase ORDEM E PROGRESSO em destaque',
+            ipiranga: 'Grito do Ipiranga histórico',
+            verde_amarelo: 'cores verde e amarelo do Brasil',
+            onca: 'onça pintada brasileira poderosa',
+            futebol: 'temática futebol brasileiro'
+          };
+          
+          // Color descriptions
+          const colorMap = {
+            verde_amarelo: 'cores verde #00843D e amarelo #FFCC29',
+            verde: 'tons de verde brasileiro',
+            amarelo: 'tons de amarelo vibrante',
+            azul: 'tons de azul brasileiro',
+            vibrante: 'cores vibrantes e saturadas'
+          };
+          
+          let prompt = `Crie uma estampa com identidade nacional brasileira profissional para camiseta: `;
+          prompt += `${themeMap[wizard.theme]}, `;
+          prompt += `${styleMap[wizard.style]}, `;
+          prompt += `${colorMap[wizard.colors]}, `;
+          prompt += `alta resolução 1024x1024px, `;
+          prompt += `fundo transparente, `;
+          prompt += `design centralizado para silk screen`;
+          
+          if (wizard.customDetails.trim()) {
+            prompt += `, ${wizard.customDetails.trim()}`;
+          }
+          
+          return prompt;
+        },
+        
+        async generateFromWizard() {
+          // Build prompt from wizard selections
+          const finalPrompt = this.buildWizardPrompt();
+          
+          // Set it to the main prompt field
+          this.geradorEstampas.prompt = finalPrompt;
+          
+          // Call the existing generate function
+          await this.generateStamp();
+          
+          // Reset wizard
+          this.geradorEstampas.wizardStep = 1;
+          this.geradorEstampas.wizard = {
+            style: null,
+            theme: null,
+            colors: 'verde_amarelo',
+            customDetails: ''
+          };
+        },
+        
+        // Funções do guia
+        selectPersona(persona) {
+          this.geradorEstampas.guideState.selectedPersona = persona;
+          this.geradorEstampas.guideState.currentPromptIndex = Math.floor(Math.random() * this.geradorEstampas.promptDatabase[persona].length);
+          this.geradorEstampas.guideState.currentStep = 'prompt-suggestion';
+        },
+        
+        refreshPrompt() {
+          const persona = this.geradorEstampas.guideState.selectedPersona;
+          if (!persona) return;
+          
+          // Evita repetir o mesmo prompt
+          let newIndex;
+          do {
+            newIndex = Math.floor(Math.random() * this.geradorEstampas.promptDatabase[persona].length);
+          } while (newIndex === this.geradorEstampas.guideState.currentPromptIndex && this.geradorEstampas.promptDatabase[persona].length > 1);
+          
+          this.geradorEstampas.guideState.currentPromptIndex = newIndex;
+        },
+        
+        usePromptSuggestion() {
+          const persona = this.geradorEstampas.guideState.selectedPersona;
+          const prompt = this.geradorEstampas.promptDatabase[persona][this.geradorEstampas.guideState.currentPromptIndex];
+          this.geradorEstampas.prompt = prompt;
+          this.geradorEstampas.guideState.currentStep = 'prompt-applied';
+          
+          // Mudar para modo avançado para mostrar o textarea
+          this.geradorEstampas.advancedMode = true;
+          
+          // Scroll suave para o textarea
+          setTimeout(() => {
+            const textarea = document.querySelector('#advanced-prompt-textarea');
+            if (textarea) {
+              textarea.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center' 
+              });
+              textarea.focus();
+            }
+          }, 100);
+        }
+      }
+    }
+
+    // ============================================
+    // SOCIAL PROOF NOTIFICATIONS
+    // ============================================
+    function socialProof() {
+      return {
+        currentNotification: null,
+        notificationQueue: [],
+        isRunning: false,
+        
+        // Pool of realistic Brazilian names
+        names: [
+          { name: 'João Pedro S.', city: 'São Paulo, SP', initial: 'JP' },
+          { name: 'Ana Maria L.', city: 'Rio de Janeiro, RJ', initial: 'AM' },
+          { name: 'Carlos Roberto M.', city: 'Belo Horizonte, MG', initial: 'CR' },
+          { name: 'Mariana Silva', city: 'Curitiba, PR', initial: 'MS' },
+          { name: 'Ricardo Alves', city: 'Porto Alegre, RS', initial: 'RA' },
+          { name: 'Juliana Costa', city: 'Brasília, DF', initial: 'JC' },
+          { name: 'Fernando Santos', city: 'Salvador, BA', initial: 'FS' },
+          { name: 'Camila Oliveira', city: 'Recife, PE', initial: 'CO' },
+          { name: 'Lucas Ferreira', city: 'Fortaleza, CE', initial: 'LF' },
+          { name: 'Beatriz Lima', city: 'Manaus, AM', initial: 'BL' },
+          { name: 'Gabriel Souza', city: 'Goiânia, GO', initial: 'GS' },
+          { name: 'Patricia Rocha', city: 'Belém, PA', initial: 'PR' },
+          { name: 'Thiago Mendes', city: 'Vitória, ES', initial: 'TM' },
+          { name: 'Renata Castro', city: 'Florianópolis, SC', initial: 'RC' },
+          { name: 'André Barbosa', city: 'Campo Grande, MS', initial: 'AB' }
+        ],
+        
+        // Action templates
+        actions: [
+          { type: 'generated', text: 'acabou de criar uma estampa' },
+          { type: 'generated', text: 'gerou uma estampa com identidade nacional' },
+          { type: 'cart', text: 'adicionou ao carrinho' },
+          { type: 'cart', text: 'selecionou uma camisa personalizada' },
+          { type: 'purchase', text: 'finalizou uma compra' },
+          { type: 'purchase', text: 'comprou uma camisa customizada' }
+        ],
+        
+        startNotifications() {
+          if (this.isRunning) return;
+          this.isRunning = true;
+          
+          // Show first notification after 5 seconds
+          setTimeout(() => {
+            this.showNextNotification();
+          }, 5000);
+        },
+        
+        showNextNotification() {
+          if (!this.isRunning) return;
+          
+          // Generate random notification
+          const randomPerson = this.names[Math.floor(Math.random() * this.names.length)];
+          const randomAction = this.actions[Math.floor(Math.random() * this.actions.length)];
+          const randomMinutes = Math.floor(Math.random() * 5) + 1;
+          
+          this.currentNotification = {
+            name: randomPerson.name,
+            city: randomPerson.city,
+            initial: randomPerson.initial,
+            action: randomAction.text,
+            type: randomAction.type,
+            time: `há ${randomMinutes} ${randomMinutes === 1 ? 'minuto' : 'minutos'}`
+          };
+          
+          // Hide after 5 seconds
+          setTimeout(() => {
+            this.currentNotification = null;
+            
+            // Show next after random delay (15-30 seconds)
+            const nextDelay = (Math.floor(Math.random() * 15) + 15) * 1000;
+            setTimeout(() => {
+              this.showNextNotification();
+            }, nextDelay);
+          }, 5000);
+        },
+        
+        stopNotifications() {
+          this.isRunning = false;
+          this.currentNotification = null;
+        }
+      };
+    }
+
+    // ============================================
+    // EXIT INTENT MODAL
+    // ============================================
+    function exitIntent() {
+      return {
+        showModal: false,
+        hasTriggered: false,
+        isAuthenticated: false,
+        attemptsRemaining: 0,
+        lastY: 0,
+        
+        initExitIntent() {
+          // Check if already triggered in this session
+          if (sessionStorage.getItem('exitIntentShown')) {
+            this.hasTriggered = true;
+            return;
+          }
+          
+          // Get auth state from main app periodically
+          setInterval(() => {
+            this.updateAuthState();
+          }, 1000);
+          
+          // Initial update
+          setTimeout(() => {
+            this.updateAuthState();
+          }, 500);
+          
+          // Track mouse movement
+          document.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+          
+          // Also trigger on mobile back button (experimental)
+          if ('onbeforeunload' in window) {
+            window.addEventListener('beforeunload', (e) => {
+              if (!this.hasTriggered && !this.showModal) {
+                // Note: Most browsers ignore custom messages now
+                // But we can still trigger our modal
+                this.triggerModal();
+              }
+            });
+          }
+          
+          // Mobile: trigger on back button
+          if ('ontouchstart' in window) {
+            window.addEventListener('popstate', () => {
+              if (!this.hasTriggered) {
+                this.triggerModal();
+              }
+            });
+          }
+        },
+        
+        updateAuthState() {
+          const mainApp = document.querySelector('[x-data*="storeApp"]');
+          if (mainApp && mainApp.__x) {
+            this.isAuthenticated = mainApp.__x.$data.auth.isAuthenticated || false;
+            this.attemptsRemaining = mainApp.__x.$data.geradorEstampas?.tentativasRestantes || 0;
+          }
+        },
+        
+        handleMouseMove(e) {
+          // Detect upward movement toward browser controls
+          if (e.clientY < 50 && this.lastY >= 50 && !this.hasTriggered) {
+            // Mouse moved from page into browser UI area
+            this.triggerModal();
+          }
+          this.lastY = e.clientY;
+        },
+        
+        triggerModal() {
+          if (this.hasTriggered) return;
+          
+          // Don't show if user just arrived (< 10 seconds on page)
+          const timeOnPage = Date.now() - (window.pageLoadTime || Date.now());
+          if (timeOnPage < 10000) return;
+          
+          // Update auth state before showing
+          this.updateAuthState();
+          
+          // Don't show if user already generated a stamp
+          const mainApp = document.querySelector('[x-data*="storeApp"]');
+          if (mainApp && mainApp.__x) {
+            const hasGenerated = mainApp.__x.$data.geradorEstampas.generatedImageUrl;
+            if (hasGenerated) return;
+          }
+          
+          this.showModal = true;
+          this.hasTriggered = true;
+          sessionStorage.setItem('exitIntentShown', 'true');
+          
+          // Track event (if you have analytics)
+          // gtag('event', 'exit_intent_shown');
+        },
+        
+        closeModal() {
+          this.showModal = false;
+        },
+        
+        closeAndScrollToGenerator() {
+          this.closeModal();
+          setTimeout(() => {
+            const element = document.getElementById('gerador-estampas');
+            if (element) {
+              const offset = 80;
+              const elementPosition = element.getBoundingClientRect().top;
+              const offsetPosition = elementPosition + window.pageYOffset - offset;
+              window.scrollTo({
+                top: offsetPosition,
+                behavior: 'smooth'
+              });
+            }
+          }, 300);
+        },
+        
+        openSignupAndClose() {
+          this.closeModal();
+          setTimeout(() => {
+            const mainApp = document.querySelector('[x-data*="storeApp"]');
+            if (mainApp && mainApp.__x) {
+              mainApp.__x.$data.geradorEstampas.openLoginModal = true;
+            }
+          }, 300);
+        }
+      };
+    }
+  </script>
   
   <!-- Alpine.js -->
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -398,9 +2146,330 @@
         transition-duration: 0.01ms !important;
       }
     }
+
+    /* ============================================
+       SPEECH BUBBLE - INTERATIVO COM SCROLL
+       ============================================ */
+    .wizard-section-wrapper {
+      position: relative;
+      scroll-margin-top: 100px;
+      overflow: visible !important;
+    }
+
+    .wizard-bubble-container {
+      position: relative;
+      overflow: visible !important;
+    }
+
+    .wizard-bubble {
+      --r: 1em;
+      --t: 1.5em;
+      
+      position: absolute;
+      left: -340px;
+      top: 40%;
+      transform: translateY(-50%) translateX(-100px);
+      z-index: 100;
+      
+      max-width: 300px;
+      padding: 1.5em;
+      padding-left: 2.5em;
+      border-inline: var(--t) solid #0000;
+      border-radius: calc(var(--r) + var(--t))/var(--r);
+      border-bottom-left-radius: 0 0;
+      
+      mask:
+        radial-gradient(100% 100% at 0% 0, #0000 99%, #000 102%)
+        0% 100%/var(--t) var(--t) no-repeat,
+        linear-gradient(#000 0 0) padding-box;
+        
+      background: linear-gradient(135deg, #059669, #FBBF24) border-box;
+      color: white;
+      font-weight: 600;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      box-shadow: -15px 15px 40px rgba(5, 150, 105, 0.5);
+      
+      cursor: pointer;
+      opacity: 0;
+      transition: all 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .wizard-bubble.show {
+      opacity: 1;
+      transform: translateY(-50%) translateX(0);
+    }
+
+    .wizard-bubble:hover {
+      box-shadow: -20px 20px 50px rgba(5, 150, 105, 0.6);
+      transform: translateY(-50%) translateX(5px) scale(1.02);
+    }
+
+    .wizard-bubble-close {
+      position: absolute;
+      top: 0.75em;
+      left: 0.75em;
+      width: 24px;
+      height: 24px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      z-index: 10;
+    }
+
+    .wizard-bubble-close:hover {
+      background: rgba(255, 255, 255, 0.5);
+      transform: rotate(90deg) scale(1.1);
+    }
+
+    .wizard-bubble-close svg {
+      width: 14px;
+      height: 14px;
+      stroke: white;
+      stroke-width: 3;
+    }
+
+    .wizard-bubble-icon {
+      display: inline-block;
+      margin-right: 0.5rem;
+      font-size: 1.3em;
+      animation: wave 2s ease-in-out infinite;
+    }
+
+    @keyframes wave {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(20deg); }
+      75% { transform: rotate(-20deg); }
+    }
+
+    .wizard-bubble-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .wizard-bubble::before {
+      content: '';
+      position: absolute;
+      right: -8px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 0;
+      height: 0;
+      border-style: solid;
+      border-width: 10px 0 10px 12px;
+      border-color: transparent transparent transparent #FBBF24;
+      filter: drop-shadow(2px 0 3px rgba(0,0,0,0.1));
+      z-index: 101;
+    }
+
+    .wizard-bubble.show::before {
+      animation: arrow-pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes arrow-pulse {
+      0%, 100% { 
+        transform: translateY(-50%) translateX(0); 
+        opacity: 1;
+      }
+      50% { 
+        transform: translateY(-50%) translateX(5px); 
+        opacity: 0.7;
+      }
+    }
+
+    /* Responsivo - Tablets */
+    @media (max-width: 1280px) {
+      .wizard-bubble {
+        left: -280px;
+        max-width: 260px;
+        font-size: 0.875rem;
+      }
+    }
+
+    /* Responsivo - Mobile */
+    @media (max-width: 1024px) {
+      .wizard-bubble {
+        position: static;
+        transform: none !important;
+        max-width: 100%;
+        margin: 1rem 0;
+        border-bottom-left-radius: var(--r);
+        border-bottom-right-radius: 0 0;
+      }
+      
+      .wizard-bubble.show {
+        transform: none !important;
+      }
+    }
+
+    /* ============================================
+       GUIDE SPEECH BUBBLES - CONTEXTUAIS
+       ============================================ */
+
+    /* Bubble saindo de CIMA da opção */
+    .guide-bubble-top {
+      --r: 1em;
+      --t: 1.5em;
+      
+      position: absolute;
+      bottom: calc(100% + 20px);
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      z-index: 150;
+      
+      min-width: 280px;
+      max-width: 350px;
+      padding: 1.25em;
+      padding-bottom: calc(1.25em + var(--t));
+      border-inline: var(--t) solid #0000;
+      border-radius: calc(var(--r) + var(--t))/var(--r);
+      border-top-left-radius: 0 0;
+      border-top-right-radius: 0 0;
+      
+      mask:
+        radial-gradient(100% 100% at 50% 100%, #0000 99%, #000 102%)
+        50% 0%/var(--t) var(--t) no-repeat,
+        linear-gradient(#000 0 0) padding-box;
+        
+      background: linear-gradient(135deg, #059669, #FBBF24) border-box;
+      color: white;
+      font-weight: 600;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      box-shadow: 0 -10px 30px rgba(5, 150, 105, 0.4);
+      
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .guide-bubble-top.show {
+      opacity: 1;
+      pointer-events: all;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Bubble para sugestão de prompt com botão refresh */
+    .prompt-suggestion-bubble {
+      position: relative;
+      min-width: 320px;
+      max-width: 400px;
+      padding: 1.5em;
+    }
+
+    .prompt-text {
+      background: rgba(255, 255, 255, 0.15);
+      padding: 1em;
+      border-radius: 0.5em;
+      margin: 0.75em 0;
+      font-size: 0.85em;
+      line-height: 1.6;
+      font-weight: 500;
+      font-style: italic;
+    }
+
+    .bubble-actions {
+      display: flex;
+      gap: 0.5em;
+      margin-top: 1em;
+    }
+
+    .bubble-btn {
+      flex: 1;
+      padding: 0.6em 1em;
+      border: none;
+      border-radius: 0.5em;
+      font-weight: 700;
+      font-size: 0.85em;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4em;
+    }
+
+    .bubble-btn-primary {
+      background: white;
+      color: #059669;
+    }
+
+    .bubble-btn-primary:hover {
+      background: #f0f0f0;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    .bubble-btn-secondary {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: 2px solid white;
+    }
+
+    .bubble-btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: scale(1.05);
+    }
+
+    /* Container para posicionar bubbles */
+    .guide-step-container {
+      position: relative;
+    }
+
+    /* Animação de pulso para chamar atenção */
+    @keyframes pulse-glow {
+      0%, 100% { 
+        box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.4);
+      }
+      50% { 
+        box-shadow: 0 0 0 10px rgba(5, 150, 105, 0);
+      }
+    }
+
+    .guide-bubble-top.pulse {
+      animation: pulse-glow 2s infinite;
+    }
+
+    /* Responsivo */
+    @media (max-width: 768px) {
+      .guide-bubble-top {
+        min-width: 240px;
+        max-width: 90vw;
+        font-size: 0.85rem;
+      }
+      
+      .prompt-suggestion-bubble {
+        min-width: 280px;
+        max-width: 90vw;
+      }
+    }
   </style>
+  
+  <!-- Track Page Load Time for Exit Intent -->
+  <script>
+    window.pageLoadTime = Date.now();
+  </script>
+  
+  <!-- Acessibilidade - Enter/Space ativam o balão -->
+  <script>
+    document.addEventListener('alpine:init', () => {
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          const bubble = document.querySelector('.wizard-bubble:focus');
+          if (bubble) {
+            e.preventDefault();
+            bubble.click();
+          }
+        }
+      });
+    });
+  </script>
 </head>
-<body class="bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 antialiased" x-data="storeApp()" x-init="initApp()">
+<body class="bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 antialiased" x-data="storeApp()" x-init="initApp()" :class="{ 'dark': darkMode }">
   
   <!-- Skip to Content (Accessibility) -->
   <a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
@@ -435,6 +2504,24 @@
         
         <!-- Right Actions -->
         <div class="flex items-center space-x-4">
+          <!-- Login/Logout Button -->
+          <button 
+            x-show="!auth.isAuthenticated"
+            @click="geradorEstampas.openLoginModal = true"
+            class="hidden lg:inline-flex items-center px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-medium rounded-full transition-all"
+          >
+            <i class="fas fa-user mr-2"></i>
+            <span>Login</span>
+          </button>
+          <button 
+            x-show="auth.isAuthenticated"
+            @click="logout()"
+            class="hidden lg:inline-flex items-center px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-medium rounded-full transition-all"
+          >
+            <i class="fas fa-sign-out-alt mr-2"></i>
+            <span>Sair</span>
+          </button>
+          
           <!-- Dark Mode Toggle -->
           <button 
             @click="toggleDarkMode()"
@@ -537,7 +2624,7 @@
           data-aos-delay="200"
           class="text-xl md:text-2xl text-white/90 mb-10 max-w-2xl mx-auto"
         >
-          Camisetas premium com designs patrióticos exclusivos. 
+          Camisetas premium com designs exclusivos com identidade nacional. 
           Qualidade incomparável para quem ama o Brasil.
         </p>
         
@@ -595,6 +2682,762 @@
         <a href="#produtos" @click.prevent="scrollTo('produtos')" class="text-white/60 hover:text-white transition-colors" aria-label="Rolar para produtos">
           <i class="fas fa-chevron-down text-2xl"></i>
         </a>
+      </div>
+    </section>
+
+    <!-- ============================================ -->
+    <!-- GERADOR DE ESTAMPAS -->
+    <!-- ============================================ -->
+    <section id="wizard-section" class="wizard-section-wrapper py-12 lg:py-16 bg-white dark:bg-gray-900">
+      <div class="container mx-auto px-4 lg:px-8">
+        <!-- Section Header -->
+        <div class="text-center mb-8" data-aos="fade-up">
+          <span class="inline-flex items-center gap-2 bg-gradient-to-r from-green-500 to-yellow-500 text-white px-3 py-1.5 rounded-full text-xs font-bold mb-3 shadow-sm">
+            IA Generativa
+          </span>
+          <h2 class="font-heading text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3">
+            🎨 Transforme Suas Ideias em <span class="text-brasil-green dark:text-brasil-yellow">Estampas Únicas</span>
+          </h2>
+          <p class="text-base md:text-lg text-gray-600 dark:text-gray-300 mb-6 max-w-3xl mx-auto">
+            Nossa inteligência artificial cria designs exclusivos com identidade nacional profissionais em <strong>30 segundos</strong>. 
+            Sem habilidades de design necessárias. <strong class="text-brasil-green">10 designs exclusivos</strong> para começar!
+          </p>
+        </div>
+
+        <!-- Gerador Container -->
+        <div class="max-w-4xl mx-auto" data-aos="fade-up" data-aos-delay="100">
+          <!-- Gallery Section - Insert after main header, before form -->
+          <div class="mb-8" data-aos="fade-up" data-aos-delay="200">
+            <div class="text-center mb-5">
+              <h3 class="text-2xl md:text-3xl font-bold text-brasil-green dark:text-white mb-3">
+                ✨ Veja o que nossos clientes já criaram
+              </h3>
+              <p class="text-gray-600 dark:text-gray-400">
+                Inspire-se nas criações de quem já está usando
+              </p>
+              
+              <!-- Live Activity Indicator -->
+              <div class="flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-400 mt-4"
+                   x-data="{ count: 0 }"
+                   x-init="setInterval(() => { count = Math.floor(Math.random() * 3) + 2; }, 3000)">
+                <div class="flex items-center gap-1">
+                  <span class="relative flex h-3 w-3">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                  </span>
+                  <span class="font-semibold" x-text="count"></span>
+                  <span>pessoas criando estampas agora</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Gallery Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+              
+              <!-- Example 1 -->
+              <div class="group relative bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
+                <div class="aspect-square bg-gradient-to-br from-brasil-green to-brasil-yellow p-4 flex items-center justify-center">
+                  <div class="text-white text-center">
+                    <div class="text-6xl mb-2">🦅</div>
+                    <p class="text-sm font-bold">Águia Brasileira</p>
+                  </div>
+                </div>
+                <div class="p-3 bg-gray-50 dark:bg-gray-700">
+                  <p class="text-xs text-gray-600 dark:text-gray-300 font-semibold">
+                    Criado por João M.
+                  </p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">
+                    São Paulo, SP
+                  </p>
+                </div>
+              </div>
+
+              <!-- Example 2 -->
+              <div class="group relative bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
+                <div class="aspect-square bg-gradient-to-br from-green-600 to-yellow-400 p-4 flex items-center justify-center">
+                  <div class="text-white text-center">
+                    <div class="text-6xl mb-2">🇧🇷</div>
+                    <p class="text-sm font-bold">Verde e Amarelo</p>
+                  </div>
+                </div>
+                <div class="p-3 bg-gray-50 dark:bg-gray-700">
+                  <p class="text-xs text-gray-600 dark:text-gray-300 font-semibold">
+                    Criado por Ana S.
+                  </p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">
+                    Rio de Janeiro, RJ
+                  </p>
+                </div>
+              </div>
+
+              <!-- Example 3 -->
+              <div class="group relative bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
+                <div class="aspect-square bg-gradient-to-br from-yellow-500 to-green-600 p-4 flex items-center justify-center">
+                  <div class="text-white text-center">
+                    <div class="text-6xl mb-2">⚡</div>
+                    <p class="text-sm font-bold">Ordem e Progresso</p>
+                  </div>
+                </div>
+                <div class="p-3 bg-gray-50 dark:bg-gray-700">
+                  <p class="text-xs text-gray-600 dark:text-gray-300 font-semibold">
+                    Criado por Carlos R.
+                  </p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">
+                    Belo Horizonte, MG
+                  </p>
+                </div>
+              </div>
+
+              <!-- Example 4 -->
+              <div class="group relative bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
+                <div class="aspect-square bg-gradient-to-br from-brasil-yellow to-brasil-green p-4 flex items-center justify-center">
+                  <div class="text-white text-center">
+                    <div class="text-6xl mb-2">🌟</div>
+                    <p class="text-sm font-bold">Estrela Solitária</p>
+                  </div>
+                </div>
+                <div class="p-3 bg-gray-50 dark:bg-gray-700">
+                  <p class="text-xs text-gray-600 dark:text-gray-300 font-semibold">
+                    Criado por Maria L.
+                  </p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">
+                    Curitiba, PR
+                  </p>
+                </div>
+              </div>
+
+              <!-- Example 5 -->
+              <div class="group relative bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
+                <div class="aspect-square bg-gradient-to-br from-green-700 to-yellow-300 p-4 flex items-center justify-center">
+                  <div class="text-white text-center">
+                    <div class="text-6xl mb-2">🏆</div>
+                    <p class="text-sm font-bold">Brasil Campeão</p>
+                  </div>
+                </div>
+                <div class="p-3 bg-gray-50 dark:bg-gray-700">
+                  <p class="text-xs text-gray-600 dark:text-gray-300 font-semibold">
+                    Criado por Pedro F.
+                  </p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">
+                    Porto Alegre, RS
+                  </p>
+                </div>
+              </div>
+
+              <!-- Example 6 -->
+              <div class="group relative bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
+                <div class="aspect-square bg-gradient-to-br from-yellow-400 to-green-700 p-4 flex items-center justify-center">
+                  <div class="text-white text-center">
+                    <div class="text-6xl mb-2">🌴</div>
+                    <p class="text-sm font-bold">Amazônia Viva</p>
+                  </div>
+                </div>
+                <div class="p-3 bg-gray-50 dark:bg-gray-700">
+                  <p class="text-xs text-gray-600 dark:text-gray-300 font-semibold">
+                    Criado por Juliana K.
+                  </p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">
+                    Brasília, DF
+                  </p>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Social Proof Counter -->
+            <div class="bg-gradient-to-r from-brasil-green to-brasil-yellow rounded-xl p-6 text-white text-center">
+              <div class="flex items-center justify-center gap-8 flex-wrap">
+                <div x-data="{ count: 0 }" 
+                     x-init="setTimeout(() => { let interval = setInterval(() => { count += 12; if(count >= 342) { count = 342; clearInterval(interval); } }, 30); }, 500)">
+                  <p class="text-3xl md:text-4xl font-bold">
+                    <span x-text="count"></span>+
+                  </p>
+                  <p class="text-sm opacity-90">criações hoje</p>
+                </div>
+                <div class="hidden md:block w-px h-12 bg-white/30"></div>
+                <div>
+                  <p class="text-3xl md:text-4xl font-bold">1.247</p>
+                  <p class="text-sm opacity-90">esta semana</p>
+                </div>
+                <div class="hidden md:block w-px h-12 bg-white/30"></div>
+                <div>
+                  <p class="text-3xl md:text-4xl font-bold">⭐ 4.9</p>
+                  <p class="text-sm opacity-90">avaliação média</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- CTA to scroll/start -->
+            <div class="text-center mt-8">
+              <p class="text-gray-600 dark:text-gray-400 mb-4">
+                Sua vez! Crie algo único em 30 segundos
+              </p>
+              <div class="inline-flex items-center gap-2 text-brasil-green dark:text-brasil-yellow animate-bounce">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                </svg>
+                <span class="font-semibold">Comece aqui embaixo</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Attempts Counter - Gamified -->
+          <div x-show="auth.isAuthenticated" 
+               class="mb-8 bg-gradient-to-r from-green-50 to-yellow-50 dark:from-gray-800 dark:to-gray-800 border-2 rounded-2xl p-6 shadow-lg"
+               :class="{
+                 'border-green-300 dark:border-green-600': geradorEstampas.tentativasRestantes > 5,
+                 'border-yellow-300 dark:border-yellow-600': geradorEstampas.tentativasRestantes <= 5 && geradorEstampas.tentativasRestantes > 2,
+                 'border-red-300 dark:border-red-600 animate-pulse': geradorEstampas.tentativasRestantes <= 2
+               }">
+            
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-brasil-green to-brasil-yellow flex items-center justify-center shadow-lg">
+                  <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
+                  </svg>
+                </div>
+                <div>
+                  <h4 class="font-bold text-lg text-gray-800 dark:text-white">
+                    Suas Estampas Grátis
+                  </h4>
+                  <p class="text-sm text-gray-600 dark:text-gray-400">
+                    <span x-show="geradorEstampas.tentativasRestantes > 2">
+                      Você tem <strong class="text-brasil-green" x-text="geradorEstampas.tentativasRestantes"></strong> estampas disponíveis
+                    </span>
+                    <span x-show="geradorEstampas.tentativasRestantes <= 2 && geradorEstampas.tentativasRestantes > 0" class="text-orange-600 dark:text-orange-400 font-semibold">
+                      ⚠️ Restam apenas <span x-text="geradorEstampas.tentativasRestantes"></span> estampas!
+                    </span>
+                    <span x-show="geradorEstampas.tentativasRestantes === 0" class="text-red-600 dark:text-red-400 font-semibold">
+                      🚫 Você usou todas as estampas
+                    </span>
+                  </p>
+                </div>
+              </div>
+              
+              <!-- Counter Badge -->
+              <div class="text-right">
+                <div class="text-4xl font-bold font-display"
+                     :class="{
+                       'text-brasil-green': geradorEstampas.tentativasRestantes > 5,
+                       'text-yellow-600': geradorEstampas.tentativasRestantes <= 5 && geradorEstampas.tentativasRestantes > 2,
+                       'text-red-600': geradorEstampas.tentativasRestantes <= 2
+                     }">
+                  <span x-text="geradorEstampas.tentativasRestantes"></span>/<span class="text-2xl text-gray-400">10</span>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  estampas
+                </p>
+              </div>
+            </div>
+
+            <!-- Visual Progress Bar -->
+            <div class="mb-4">
+              <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div class="h-full transition-all duration-500 ease-out rounded-full"
+                     :style="`width: ${(geradorEstampas.tentativasRestantes / 10) * 100}%`"
+                     :class="{
+                       'bg-gradient-to-r from-green-400 to-green-600': geradorEstampas.tentativasRestantes > 5,
+                       'bg-gradient-to-r from-yellow-400 to-yellow-600': geradorEstampas.tentativasRestantes <= 5 && geradorEstampas.tentativasRestantes > 2,
+                       'bg-gradient-to-r from-red-400 to-red-600': geradorEstampas.tentativasRestantes <= 2
+                     }">
+                </div>
+              </div>
+            </div>
+
+            <!-- Dots Visualization -->
+            <div class="flex items-center justify-center gap-2 mb-4">
+              <template x-for="i in 10" :key="i">
+                <div class="w-3 h-3 rounded-full transition-all duration-300"
+                     :class="{
+                       'bg-gradient-to-br from-brasil-green to-brasil-yellow scale-110 shadow-md': i <= geradorEstampas.tentativasRestantes,
+                       'bg-gray-300 dark:bg-gray-600 scale-75 opacity-40': i > geradorEstampas.tentativasRestantes
+                     }">
+                </div>
+              </template>
+            </div>
+
+            <!-- Information Box -->
+            <div class="bg-white/50 dark:bg-gray-900/50 rounded-xl p-4 backdrop-blur-sm">
+              <div class="flex items-start gap-3">
+                <div class="flex-shrink-0">
+                  <svg class="w-5 h-5 text-brasil-yellow" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                  </svg>
+                </div>
+                <div class="text-sm text-gray-700 dark:text-gray-300">
+                  <p class="font-semibold mb-1">💡 Como ganhar mais estampas:</p>
+                  <ul class="space-y-1 text-xs">
+                    <li class="flex items-center gap-2">
+                      <span class="text-green-500">✓</span>
+                      <span>Compre qualquer camisa → <strong class="text-brasil-green">+10 estampas</strong></span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                      <span class="text-green-500">✓</span>
+                      <span>Cada compra recarrega suas estampas automaticamente</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <!-- CTA when attempts run low -->
+            <div x-show="geradorEstampas.tentativasRestantes <= 2 && geradorEstampas.tentativasRestantes > 0"
+                 x-transition
+                 class="mt-4 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl p-4 text-center">
+              <p class="font-bold mb-2">🔥 Suas estampas estão acabando!</p>
+              <p class="text-sm mb-3 opacity-90">
+                Não perca suas criações. Compre uma camisa agora e ganhe +10 estampas.
+              </p>
+              <a href="#produtos" 
+                 class="inline-block bg-white text-orange-600 font-bold px-6 py-2 rounded-full hover:bg-gray-100 transition-colors text-sm">
+                VER CAMISETAS →
+              </a>
+            </div>
+
+            <!-- CTA when no attempts left -->
+            <div x-show="geradorEstampas.tentativasRestantes === 0"
+                 x-transition
+                 class="mt-4 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl p-4 text-center">
+              <p class="font-bold text-lg mb-2">🚫 Você usou todas as estampas!</p>
+              <p class="text-sm mb-4 opacity-90">
+                Quer continuar criando? Compre uma camisa e ganhe +10 estampas grátis.
+              </p>
+              <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                <a href="#produtos" 
+                   class="inline-block bg-white text-red-600 font-bold px-6 py-3 rounded-full hover:bg-gray-100 transition-colors">
+                  🛒 COMPRAR CAMISA
+                </a>
+                <button class="bg-white/20 hover:bg-white/30 text-white font-semibold px-6 py-3 rounded-full transition-colors">
+                  💰 COMPRAR SÓ ESTAMPAS (R$ 29,90)
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Show login CTA when not authenticated -->
+          <div x-show="!auth.isAuthenticated" 
+               class="mb-8 bg-gradient-to-r from-brasil-green to-brasil-yellow text-white rounded-2xl p-6 shadow-xl text-center">
+            <div class="flex items-center justify-center gap-3 mb-3">
+              <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
+                </svg>
+              </div>
+              <h4 class="text-2xl font-bold">🎁 10 Estampas Grátis para criar sua camisa personalizada agora</h4>
+            </div>
+            <p class="mb-4 opacity-90">
+              Crie uma conta em 30 segundos e comece a gerar estampas únicas agora
+            </p>
+            <button @click="geradorEstampas.openLoginModal = true" 
+                    class="bg-white text-brasil-green font-bold px-8 py-3 rounded-full hover:bg-gray-100 transition-colors shadow-lg">
+              🎁 CRIAR CONTA E GANHAR 10 ESTAMPAS GRÁTIS
+            </button>
+          </div>
+
+          <!-- Formulário -->
+          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 md:p-8 border border-gray-100 dark:border-gray-700 relative z-10">
+            <form @submit.prevent="generateStamp()">
+              <!-- Caixa Informativa Modo Guiado -->
+              <div x-show="!geradorEstampas.advancedMode" 
+                   x-transition
+                   class="mb-6 bg-gradient-to-r from-green-100 via-yellow-50 to-green-100 dark:from-green-900/30 dark:via-yellow-900/20 dark:to-green-900/30 border-l-4 border-green-500 dark:border-green-400 p-4 rounded-lg shadow-sm">
+                <div class="flex items-start">
+                  <div class="flex-shrink-0">
+                    <svg class="h-6 w-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                  </div>
+                  <div class="ml-3">
+                    <p class="text-sm font-medium text-green-800 dark:text-green-200">
+                      🎨 Perfeito para iniciantes! Vamos guiar você passo a passo na criação da sua estampa com identidade nacional
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Mode Toggle -->
+              <div class="mb-6 flex items-center justify-center gap-4 bg-gray-100 dark:bg-gray-800 p-2 rounded-xl">
+                <button 
+                  type="button"
+                  @click="geradorEstampas.advancedMode = true; geradorEstampas.wizardMode = false;"
+                  :class="geradorEstampas.advancedMode ? 'bg-orange-500 text-white shadow-lg' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'"
+                  class="flex-1 py-3 px-6 rounded-lg font-semibold transition-all transform hover:scale-105">
+                  🔥 Modo Avançado
+                </button>
+                
+                <div class="wizard-bubble-container flex-1 relative">
+                  <button 
+                    type="button"
+                    @click="geradorEstampas.advancedMode = false; geradorEstampas.wizardMode = true; geradorEstampas.guideState.currentStep = null; geradorEstampas.guideState.selectedPersona = null;"
+                    :class="!geradorEstampas.advancedMode ? 'bg-green-500 text-white shadow-lg' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'"
+                    class="w-full py-3 px-6 rounded-lg font-semibold transition-all transform hover:scale-105">
+                    🎯 Modo Guiado (Recomendado)
+                  </button>
+                  
+                  <!-- Speech Bubble Interativo -->
+                  <div 
+                    x-show="!speechBubbleDismissed && geradorEstampas.advancedMode"
+                    x-data="{ 
+                      bubbleObserver: null,
+                      initBubble() {
+                        this.$nextTick(() => {
+                          const options = {
+                            root: null,
+                            threshold: [0.2, 0.3, 0.4, 0.5],
+                            rootMargin: '-80px'
+                          };
+                          
+                          this.bubbleObserver = new IntersectionObserver((entries) => {
+                            entries.forEach(entry => {
+                              if (entry.isIntersecting && entry.intersectionRatio >= 0.3) {
+                                setTimeout(() => {
+                                  entry.target.classList.add('show');
+                                }, 500);
+                              } else {
+                                setTimeout(() => {
+                                  entry.target.classList.remove('show');
+                                }, 200);
+                              }
+                            });
+                          }, options);
+                          
+                          this.bubbleObserver.observe(this.$el);
+                        });
+                      }
+                    }"
+                    x-init="initBubble()"
+                    @click="activateGuidedMode()"
+                    class="wizard-bubble"
+                    role="button"
+                    aria-label="Ativar modo guiado"
+                    tabindex="0">
+                    
+                    <!-- Botão Fechar -->
+                    <button 
+                      @click.stop="dismissSpeechBubble()"
+                      class="wizard-bubble-close"
+                      aria-label="Fechar dica"
+                      type="button">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                      </svg>
+                    </button>
+                    
+                    <!-- Conteúdo do Balão -->
+                    <div class="wizard-bubble-content">
+                      <div>
+                        <span class="wizard-bubble-icon">👋</span>
+                        <strong style="font-size: 1.05em;">Não sabe o que criar?</strong>
+                      </div>
+                      <p style="margin: 0.5em 0 0 0; font-weight: 500; opacity: 0.95;">
+                        Fique tranquilo! O Modo Guiado foi feito especialmente para você. 
+                        Clique aqui e vamos te ajudar passo a passo! 🎨
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Advanced Mode (existing textarea) -->
+              <div x-show="geradorEstampas.advancedMode" x-transition>
+                <div class="mb-6">
+                  <div class="flex items-center justify-between mb-2">
+                    <label class="block text-lg font-semibold text-brasil-green dark:text-brasil-yellow">
+                      💡 O que você quer ver na sua camisa?
+                    </label>
+                    <div class="text-right">
+                      <span 
+                        class="text-sm font-semibold transition-colors"
+                        :class="(geradorEstampas.prompt?.length || 0) > 500 ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'"
+                        x-text="Math.max(0, 500 - (geradorEstampas.prompt?.length || 0))"
+                      ></span>
+                      <span class="text-xs text-gray-500 dark:text-gray-400"> / 500</span>
+                    </div>
+                  </div>
+                  <textarea
+                    id="advanced-prompt-textarea"
+                    x-model="geradorEstampas.prompt"
+                    @input="if(geradorEstampas.prompt && geradorEstampas.prompt.length > 500) { geradorEstampas.prompt = geradorEstampas.prompt.substring(0, 500); showToast('⚠️ Limite de 500 caracteres atingido!', 'warning'); }"
+                    @focus="pauseSocialProof()"
+                    @blur="setTimeout(() => resumeSocialProof(), 5000)"
+                    placeholder="Ex: 'Águia brasileira majestosa com bandeira ao fundo' ou 'Frase ORDEM E PROGRESSO em estilo vintage'..."
+                    maxlength="500"
+                    class="w-full h-24 p-4 bg-white dark:bg-gray-900 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-brasil-green focus:border-transparent transition text-gray-900 dark:text-white resize-none"
+                    :class="(geradorEstampas.prompt?.length || 0) >= 500 ? 'border-red-500 dark:border-red-600' : 'border-gray-300 dark:border-gray-600'"
+                    :disabled="geradorEstampas.isLoading"
+                  ></textarea>
+                <div x-show="(geradorEstampas.prompt?.length || 0) >= 500" class="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded text-xs text-red-700 dark:text-red-300">
+                  <p class="font-semibold">⚠️ Limite de 500 caracteres atingido! Você não pode adicionar mais texto.</p>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2 flex items-start gap-2" x-show="(geradorEstampas.prompt?.length || 0) <= 500">
+                  <span>💡</span>
+                  <span><strong>Dica:</strong> Quanto mais detalhes você der (cores, estilo, elementos), melhor será o resultado. Exemplos: "estilo minimalista", "cores vibrantes", "efeito vintage"</span>
+                </p>
+              </div>
+
+              <!-- MODO GUIADO - ESTRUTURA COMPLETA -->
+              <div x-show="!geradorEstampas.advancedMode" x-transition class="space-y-6">
+                
+                <!-- STEP 1: Escolha de Persona -->
+                <div class="guide-step-container">
+                  <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-4">
+                    👥 Passo 1: Quem vai aparecer na sua estampa?
+                  </h3>
+                  
+                  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <!-- Opção Família -->
+                    <div class="guide-step-container">
+                      <button
+                        @click="selectPersona('familia')"
+                        :class="geradorEstampas.guideState.selectedPersona === 'familia' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
+                        class="relative w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
+                        <div class="text-4xl mb-2">👨‍👩‍👧‍👦</div>
+                        <div class="font-semibold text-sm text-gray-800 dark:text-white">Família</div>
+                      </button>
+                      
+                      <!-- Speech Bubble Guia -->
+                      <div 
+                        x-show="!geradorEstampas.guideState.selectedPersona && geradorEstampas.guideState.currentStep === null"
+                        class="guide-bubble-top show pulse">
+                        <div class="text-center">
+                          <span class="text-2xl block mb-2">👋</span>
+                          <strong>Comece escolhendo!</strong>
+                          <p class="text-sm mt-2 opacity-90">Clique em uma opção para ver sugestões de prompts incríveis</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Opção Sozinho -->
+                    <div class="guide-step-container">
+                      <button
+                        @click="selectPersona('sozinho')"
+                        :class="geradorEstampas.guideState.selectedPersona === 'sozinho' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
+                        class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
+                        <div class="text-4xl mb-2">🧍</div>
+                        <div class="font-semibold text-sm text-gray-800 dark:text-white">Sozinho(a)</div>
+                      </button>
+                    </div>
+                    
+                    <!-- Opção Casal -->
+                    <div class="guide-step-container">
+                      <button
+                        @click="selectPersona('casal')"
+                        :class="geradorEstampas.guideState.selectedPersona === 'casal' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
+                        class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
+                        <div class="text-4xl mb-2">💑</div>
+                        <div class="font-semibold text-sm text-gray-800 dark:text-white">Casal</div>
+                      </button>
+                    </div>
+                    
+                    <!-- Opção Pet -->
+                    <div class="guide-step-container">
+                      <button
+                        @click="selectPersona('pet')"
+                        :class="geradorEstampas.guideState.selectedPersona === 'pet' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
+                        class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
+                        <div class="text-4xl mb-2">🐕</div>
+                        <div class="font-semibold text-sm text-gray-800 dark:text-white">Pet</div>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- STEP 2: Sugestão de Prompt -->
+                <div 
+                  x-show="geradorEstampas.guideState.selectedPersona && geradorEstampas.guideState.currentStep === 'prompt-suggestion'"
+                  x-transition
+                  class="guide-step-container">
+                  
+                  <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-4">
+                    ✨ Passo 2: Sugestão de Prompt
+                  </h3>
+                  
+                  <div class="bg-white dark:bg-gray-700 p-6 rounded-lg border-2 border-gray-200 dark:border-gray-600 relative">
+                    <!-- Speech Bubble com Sugestão -->
+                    <div class="guide-bubble-top prompt-suggestion-bubble show">
+                      <div class="text-center">
+                        <span class="text-2xl block mb-2">🎨</span>
+                        <strong class="text-base">Que tal este prompt?</strong>
+                      </div>
+                      
+                      <div class="prompt-text" x-text="geradorEstampas.promptDatabase[geradorEstampas.guideState.selectedPersona]?.[geradorEstampas.guideState.currentPromptIndex] || ''"></div>
+                      
+                      <div class="bubble-actions">
+                        <button 
+                          @click="usePromptSuggestion()"
+                          class="bubble-btn bubble-btn-primary">
+                          ✅ Usar Este
+                        </button>
+                        <button 
+                          @click="refreshPrompt()"
+                          class="bubble-btn bubble-btn-secondary">
+                          🔄 Outro
+                        </button>
+                      </div>
+                      
+                      <p class="text-xs text-center mt-3 opacity-75">
+                        💡 Dica: Você pode editar o prompt depois de aplicar
+                      </p>
+                    </div>
+                    
+                    <div class="text-center py-8 text-gray-400">
+                      <p class="text-sm">Escolha uma opção acima ☝️</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- STEP 3: Confirmar Prompt Aplicado -->
+                <div 
+                  x-show="geradorEstampas.guideState.currentStep === 'prompt-applied'"
+                  x-transition
+                  class="bg-green-50 dark:bg-green-900/20 border-2 border-green-500 dark:border-green-400 rounded-lg p-6 text-center">
+                  <span class="text-4xl block mb-3">🎉</span>
+                  <h3 class="text-xl font-bold text-green-800 dark:text-green-200 mb-2">Prompt Aplicado!</h3>
+                  <p class="text-gray-700 dark:text-gray-300 mb-4">
+                    Seu prompt foi inserido no campo abaixo. Você pode editá-lo ou prosseguir para gerar sua estampa!
+                  </p>
+                  <button
+                    @click="geradorEstampas.guideState.currentStep = null; geradorEstampas.guideState.selectedPersona = null"
+                    class="bg-green-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-green-700 transition-all">
+                    ✨ Escolher Outro Prompt
+                  </button>
+                </div>
+              </div>
+
+              <!-- Image Upload -->
+              <div class="mb-6">
+                <label class="block text-lg font-semibold text-brasil-green dark:text-brasil-yellow mb-2">
+                  📷 Tem uma inspiração? Envie aqui (opcional)
+                </label>
+                <div x-show="!geradorEstampas.imagePreview">
+                  <input
+                    type="file"
+                    @change="handleFileUpload($event)"
+                    accept="image/png, image/jpeg, image/webp"
+                    class="hidden"
+                    id="file-upload"
+                    :disabled="geradorEstampas.isLoading"
+                    multiple="false"
+                  />
+                  <label
+                    for="file-upload"
+                    class="w-full flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center cursor-pointer hover:border-brasil-green hover:text-brasil-green transition-colors"
+                    :class="geradorEstampas.isLoading ? 'cursor-not-allowed opacity-50' : ''"
+                  >
+                    <svg class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                    </svg>
+                    <p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                      Arraste uma imagem ou clique para selecionar
+                    </p>
+                    <p class="text-xs text-gray-500">
+                      JPG, PNG ou WEBP até 5MB
+                    </p>
+                  </label>
+                </div>
+                <div x-show="geradorEstampas.imagePreview" class="relative inline-block">
+                  <img 
+                    :src="geradorEstampas.imagePreview" 
+                    alt="Preview" 
+                    class="w-48 h-48 object-cover rounded-lg border-2 border-brasil-green"
+                  />
+                  <button
+                    type="button"
+                    @click="clearImage()"
+                    :disabled="geradorEstampas.isLoading"
+                    class="absolute top-2 right-2 bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm hover:bg-red-700 transition-colors"
+                    aria-label="Remover imagem"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+
+              <!-- Generate Button -->
+              <button
+                type="submit"
+                :disabled="geradorEstampas.isLoading"
+                class="w-full flex items-center justify-center gap-3 bg-brasil-yellow hover:bg-yellow-500 text-brasil-green font-bold py-4 px-8 rounded-xl text-lg transition-all transform hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed shadow-lg hover:shadow-xl disabled:opacity-75 disabled:bg-gray-400 disabled:text-white"
+                x-show="!geradorEstampas.isLoading"
+              >
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                </svg>
+                <span>✨ CRIAR MINHA ESTAMPA GRÁTIS</span>
+              </button>
+              <button
+                type="submit"
+                disabled
+                class="w-full flex items-center justify-center gap-3 bg-gray-400 text-white font-bold py-4 px-8 rounded-xl text-lg cursor-not-allowed opacity-75"
+                x-show="geradorEstampas.isLoading"
+              >
+                <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Gerando sua obra-prima...</span>
+              </button>
+            </form>
+
+            <!-- Error Message -->
+            <div x-show="geradorEstampas.error" class="mt-4 p-4 bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 rounded-lg">
+              <p x-text="geradorEstampas.error"></p>
+            </div>
+
+            <!-- Generated Image Result -->
+            <div x-show="geradorEstampas.generatedImageUrl" class="mt-8">
+              <!-- Success Banner -->
+              <div class="bg-gradient-to-r from-green-500 to-green-600 text-white p-4 rounded-t-xl flex items-center justify-center gap-3 mb-0">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span class="font-bold">🎉 Sua estampa está pronta!</span>
+              </div>
+              
+              <!-- ADD preview badge above image: -->
+              <div x-show="geradorEstampas.isPreview" 
+                   class="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded-lg p-3 mb-4">
+                <p class="text-sm text-yellow-800 dark:text-yellow-200 font-semibold text-center">
+                  ⚠️ PRÉVIA - Faça login para salvar permanentemente
+                </p>
+              </div>
+              
+              <div class="bg-gray-900/50 dark:bg-gray-700/50 p-4 rounded-lg flex justify-center items-center border-2 border-dashed border-gray-300 dark:border-gray-600 mb-4">
+                <img 
+                  :src="geradorEstampas.generatedImageUrl" 
+                  alt="Estampa gerada" 
+                  class="max-w-full h-auto max-h-96 rounded-md shadow-lg"
+                />
+              </div>
+              <div class="flex flex-col sm:flex-row gap-4">
+                <a
+                  :href="geradorEstampas.generatedImageUrl"
+                  download="Estampa_BRAVOS_BRASIL.png"
+                  class="flex-1 text-center bg-brasil-yellow hover:bg-brasil-yellow-dark text-brasil-green font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105 flex items-center justify-center gap-2"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                  </svg>
+                  <span>💾 BAIXAR EM ALTA RESOLUÇÃO</span>
+                </a>
+                <button
+                  @click="addToCartWithStamp()"
+                  class="flex-1 bg-brasil-green hover:bg-brasil-green-dark text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105 text-xl"
+                >
+                  <span x-show="geradorEstampas.isPreview">
+                    🔒 SALVAR E ADICIONAR AO CARRINHO
+                  </span>
+                  <span x-show="!geradorEstampas.isPreview" class="block">
+                    <span class="block">🛒 QUERO ESSA CAMISA</span>
+                    <span class="text-sm opacity-90 block mt-1">R$ 99,90 · Entrega grátis</span>
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -797,7 +3640,7 @@
             Coleção <span class="text-brasil-green dark:text-brasil-yellow">Exclusiva</span>
           </h2>
           <p class="text-gray-600 dark:text-gray-400">
-            Deslize para ver mais modelos patrióticos
+            Deslize para ver mais modelos com identidade nacional
           </p>
         </div>
         
@@ -955,7 +3798,7 @@
                 <div class="w-10 h-10 bg-brasil-green rounded-full flex items-center justify-center mr-4">
                   <i class="fas fa-check text-white"></i>
                 </div>
-                <span class="text-gray-700 dark:text-gray-300">Designs Exclusivos Patrióticos</span>
+                <span class="text-gray-700 dark:text-gray-300">Designs Exclusivos com Identidade Nacional</span>
               </div>
             </div>
             
@@ -1594,10 +4437,230 @@
   >
     <div 
       class="flex items-center px-6 py-4 rounded-lg shadow-2xl"
-      :class="toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'"
+      :class="toast.type === 'success' ? 'bg-green-500 text-white' : toast.type === 'warning' ? 'bg-yellow-500 text-white' : toast.type === 'info' ? 'bg-blue-500 text-white' : 'bg-red-500 text-white'"
     >
-      <i class="fas" :class="toast.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'"></i>
+      <i class="fas" :class="toast.type === 'success' ? 'fa-check-circle' : toast.type === 'warning' ? 'fa-exclamation-triangle' : toast.type === 'info' ? 'fa-info-circle' : 'fa-exclamation-circle'"></i>
       <span class="ml-3 font-medium" x-text="toast.message"></span>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- LOGIN MODAL -->
+  <!-- ============================================ -->
+  <div 
+    x-show="geradorEstampas.openLoginModal"
+    x-transition:enter="transition ease-out duration-300"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition ease-in duration-200"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+    @click.away="geradorEstampas.openLoginModal = false"
+    style="display: none;"
+  >
+    <div 
+      class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-8"
+      @click.stop
+    >
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="font-heading text-2xl font-bold text-gray-900 dark:text-white">
+          <span x-show="geradorEstampas.loginModalContext === 'save_stamp'">
+            🎁 Salve sua estampa e ganhe +9 estampas
+          </span>
+          <span x-show="geradorEstampas.loginModalContext === 'preview_limit'">
+            ⚠️ Faça login para continuar
+          </span>
+          <span x-show="geradorEstampas.loginModalContext !== 'save_stamp' && geradorEstampas.loginModalContext !== 'preview_limit'">
+            <span x-show="!geradorEstampas.loginForm.isRegister">Login</span>
+            <span x-show="geradorEstampas.loginForm.isRegister">Cadastro</span>
+          </span>
+        </h2>
+        <button 
+          @click="geradorEstampas.openLoginModal = false"
+          class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+        >
+          <i class="fas fa-times text-gray-600 dark:text-gray-400"></i>
+        </button>
+      </div>
+
+      <!-- ADD below title when context is save_stamp: -->
+      <div x-show="geradorEstampas.loginModalContext === 'save_stamp'" 
+           class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-4 mb-4">
+        <p class="text-sm text-gray-700 dark:text-gray-300">
+          <strong>Ao criar sua conta você vai:</strong><br>
+          ✓ Salvar esta estampa automaticamente<br>
+          ✓ Adicionar ao carrinho<br>
+          ✓ Ganhar +9 estampas extras<br>
+          ✓ Poder gerar quantas estampas quiser
+        </p>
+      </div>
+
+      <!-- ADD below title when context is preview_limit: -->
+      <div x-show="geradorEstampas.loginModalContext === 'preview_limit'" 
+           class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4 mb-4">
+        <p class="text-sm text-yellow-800 dark:text-yellow-200">
+          <strong>⚠️ Limite de Prévia Atingido</strong><br>
+          Você já gerou uma prévia neste dispositivo. Para continuar gerando estampas, faça login ou crie uma conta grátis!
+        </p>
+      </div>
+
+      <form @submit.prevent="login()" class="space-y-4">
+        <div x-show="geradorEstampas.loginForm.isRegister">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome completo</label>
+          <input 
+            type="text" 
+            x-model="geradorEstampas.loginForm.nome"
+            required
+            class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-brasil-green focus:ring-0 dark:bg-gray-700 dark:text-white"
+            placeholder="Seu nome"
+          >
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">E-mail</label>
+          <input 
+            type="email" 
+            x-model="geradorEstampas.loginForm.email"
+            required
+            class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-brasil-green focus:ring-0 dark:bg-gray-700 dark:text-white"
+            placeholder="seu@email.com"
+          >
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Senha</label>
+          <input 
+            type="password" 
+            x-model="geradorEstampas.loginForm.password"
+            required
+            minlength="6"
+            class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-brasil-green focus:ring-0 dark:bg-gray-700 dark:text-white"
+            placeholder="Mínimo 6 caracteres"
+          >
+        </div>
+
+        <div x-show="geradorEstampas.loginForm.isRegister">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">WhatsApp (opcional)</label>
+          <input 
+            type="tel" 
+            x-model="geradorEstampas.loginForm.telefone"
+            class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-brasil-green focus:ring-0 dark:bg-gray-700 dark:text-white"
+            placeholder="(11) 99999-9999"
+          >
+        </div>
+
+        <button 
+          type="submit"
+          class="w-full py-4 bg-brasil-green text-white font-bold rounded-lg hover:bg-brasil-green-dark transition-all"
+        >
+          <span x-show="!geradorEstampas.loginForm.isRegister">Entrar</span>
+          <span x-show="geradorEstampas.loginForm.isRegister">Cadastrar</span>
+        </button>
+      </form>
+
+      <div class="mt-6 text-center">
+        <button 
+          @click="geradorEstampas.loginForm.isRegister = !geradorEstampas.loginForm.isRegister"
+          class="text-sm text-brasil-green hover:text-brasil-green-dark font-medium"
+        >
+          <span x-show="!geradorEstampas.loginForm.isRegister">Não tem conta? Cadastre-se</span>
+          <span x-show="geradorEstampas.loginForm.isRegister">Já tem conta? Faça login</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- CACHE LIMIT MODAL -->
+  <!-- ============================================ -->
+  <div 
+    x-show="geradorEstampas.openCacheModal"
+    x-transition:enter="transition ease-out duration-300"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition ease-in duration-200"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+    @click.away="cancelCacheModal()"
+    style="display: none;"
+  >
+    <div 
+      class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full p-8 max-h-[90vh] overflow-y-auto"
+      @click.stop
+    >
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="font-heading text-2xl font-bold text-gray-900 dark:text-white">
+          ⚠️ Limite de Cache Atingido
+        </h2>
+        <button 
+          @click="cancelCacheModal()"
+          class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+        >
+          <i class="fas fa-times text-gray-600 dark:text-gray-400"></i>
+        </button>
+      </div>
+
+      <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4 mb-6">
+        <p class="text-sm text-yellow-800 dark:text-yellow-200">
+          <strong>Você já tem 10 estampas salvas no cache.</strong><br>
+          Para gerar uma nova estampa, você precisa excluir uma das estampas existentes. Selecione qual estampa deseja remover:
+        </p>
+      </div>
+
+      <div class="space-y-3 mb-6 max-h-96 overflow-y-auto">
+        <template x-for="(estampa, index) in geradorEstampas.cacheEstampas" :key="estampa.id">
+          <div 
+            @click="geradorEstampas.estampaParaExcluir = estampa.id"
+            class="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all"
+            :class="geradorEstampas.estampaParaExcluir === estampa.id 
+              ? 'border-brasil-green bg-brasil-green/10 dark:bg-brasil-green/20' 
+              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'"
+          >
+            <div class="w-20 h-20 flex-shrink-0 mr-4 rounded-lg overflow-hidden border-2 border-gray-200 dark:border-gray-700">
+              <img 
+                :src="estampa.imageUrl" 
+                :alt="'Estampa ' + (index + 1)"
+                class="w-full h-full object-cover"
+              />
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-gray-900 dark:text-white truncate" x-text="estampa.prompt || 'Estampa sem prompt'"></p>
+              <p class="text-xs text-gray-500 dark:text-gray-400" x-text="'Gerada em: ' + new Date(estampa.timestamp).toLocaleString('pt-BR')"></p>
+            </div>
+            <div class="ml-4">
+              <div 
+                class="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all"
+                :class="geradorEstampas.estampaParaExcluir === estampa.id 
+                  ? 'border-brasil-green bg-brasil-green' 
+                  : 'border-gray-300 dark:border-gray-600'"
+              >
+                <i 
+                  x-show="geradorEstampas.estampaParaExcluir === estampa.id"
+                  class="fas fa-check text-white text-xs"
+                ></i>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <div class="flex gap-4">
+        <button
+          @click="cancelCacheModal()"
+          class="flex-1 py-3 px-6 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
+        >
+          Cancelar
+        </button>
+        <button
+          @click="confirmDeleteAndGenerate(geradorEstampas.estampaParaExcluir)"
+          :disabled="!geradorEstampas.estampaParaExcluir"
+          class="flex-1 py-3 px-6 bg-brasil-green text-white font-bold rounded-lg hover:bg-brasil-green-dark transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
+        >
+          Excluir e Gerar Nova
+        </button>
+      </div>
     </div>
   </div>
 
@@ -1610,417 +4673,6 @@
   
   <!-- Swiper JS -->
   <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-  
-  <script>
-    // ============================================
-    // ALPINE.JS APP DATA
-    // ============================================
-    function storeApp() {
-      return {
-        // UI State
-        scrolled: false,
-        mobileMenuOpen: false,
-        openCart: false,
-        openCheckout: false,
-        darkMode: false,
-        
-        // Cart
-        cart: [],
-        
-        // Newsletter
-        newsletter: {
-          name: '',
-          email: '',
-          phone: ''
-        },
-        
-        // Checkout
-        checkout: {
-          name: '',
-          email: '',
-          phone: '',
-          cep: '',
-          address: '',
-          number: '',
-          complement: '',
-          neighborhood: '',
-          city: '',
-          state: ''
-        },
-        
-        // Toast
-        toast: {
-          show: false,
-          message: '',
-          type: 'success'
-        },
-        
-        // Products Data
-        products: [
-          {
-            id: 1,
-            name: 'Camiseta Brasil Acima de Tudo',
-            price: 89.90,
-            image: 'public/product-1.jpg',
-            badge: 'MAIS VENDIDO',
-            selectedSize: 'M',
-            quantity: 1
-          },
-          {
-            id: 2,
-            name: 'Camiseta Águia Brasileira',
-            price: 99.90,
-            image: 'public/product-2.jpg',
-            badge: 'NOVO',
-            selectedSize: 'M',
-            quantity: 1
-          },
-          {
-            id: 3,
-            name: 'Camiseta Deus Família Pátria',
-            price: 94.90,
-            image: 'public/product-3.jpg',
-            badge: null,
-            selectedSize: 'M',
-            quantity: 1
-          },
-          {
-            id: 4,
-            name: 'Camiseta Ordem e Progresso',
-            price: 89.90,
-            image: 'public/product-4.jpg',
-            badge: null,
-            selectedSize: 'M',
-            quantity: 1
-          },
-          {
-            id: 5,
-            name: 'Camiseta Brasão da República',
-            price: 109.90,
-            image: 'public/product-5.jpg',
-            badge: 'EDIÇÃO LIMITADA',
-            selectedSize: 'M',
-            quantity: 1
-          },
-          {
-            id: 6,
-            name: 'Camiseta Liberdade ou Morte',
-            price: 99.90,
-            image: 'public/product-6.jpg',
-            badge: null,
-            selectedSize: 'M',
-            quantity: 1
-          },
-          {
-            id: 7,
-            name: 'Camiseta Fé no Brasil',
-            price: 89.90,
-            image: 'public/product-7.jpg',
-            badge: null,
-            selectedSize: 'M',
-            quantity: 1
-          },
-          {
-            id: 8,
-            name: 'Camiseta Amor Patriótico',
-            price: 84.90,
-            image: 'public/product-8.jpg',
-            badge: 'PROMOÇÃO',
-            selectedSize: 'M',
-            quantity: 1
-          }
-        ],
-        
-        // Carousel Products
-        carouselProducts: [
-          { id: 1, name: 'Brasil Acima de Tudo', price: 89.90, image: 'public/product-1.jpg' },
-          { id: 2, name: 'Águia Brasileira', price: 99.90, image: 'public/product-2.jpg' },
-          { id: 3, name: 'Deus Família Pátria', price: 94.90, image: 'public/product-3.jpg' },
-          { id: 4, name: 'Ordem e Progresso', price: 89.90, image: 'public/product-4.jpg' },
-          { id: 5, name: 'Brasão da República', price: 109.90, image: 'public/product-5.jpg' },
-          { id: 6, name: 'Liberdade ou Morte', price: 99.90, image: 'public/product-6.jpg' },
-          { id: 7, name: 'Fé no Brasil', price: 89.90, image: 'public/product-7.jpg' },
-          { id: 8, name: 'Amor Patriótico', price: 84.90, image: 'public/product-8.jpg' },
-          { id: 9, name: 'Brasil Grande Novamente', price: 94.90, image: 'public/product-9.jpg' },
-          { id: 10, name: 'Independência ou Morte', price: 129.90, image: 'public/product-10.jpg' }
-        ],
-        
-        // Testimonials
-        testimonials: [
-          {
-            name: 'Carlos Silva',
-            avatar: 'public/avatar-1.jpg',
-            text: 'Qualidade incrível! A camiseta é super confortável e a estampa não desbota. Já comprei 3 diferentes!'
-          },
-          {
-            name: 'Mariana Costa',
-            avatar: 'public/avatar-2.jpg',
-            text: 'Entrega rápida e atendimento excelente. Minha família toda agora usa BRAVOS BRASIL!'
-          },
-          {
-            name: 'Roberto Mendes',
-            avatar: 'public/avatar-3.jpg',
-            text: 'Finalmente uma marca que representa nossos valores. Produto de primeira qualidade!'
-          },
-          {
-            name: 'Ana Paula Souza',
-            avatar: 'public/avatar-4.jpg',
-            text: 'Ameiiii! Tecido macio, costura perfeita. Super recomendo para todos os patriotas!'
-          },
-          {
-            name: 'Lucas Oliveira',
-            avatar: 'public/avatar-5.jpg',
-            text: 'Comprei para presentear meu pai e ele adorou. Já vou fazer mais pedidos!'
-          },
-          {
-            name: 'Cristina Lima',
-            avatar: 'public/avatar-6.jpg',
-            text: 'Excelente custo-benefício. Camisetas lindas e com significado. Parabéns!'
-          }
-        ],
-        
-        // FAQs
-        faqs: [
-          {
-            question: 'Quais são os tamanhos disponíveis?',
-            answer: 'Trabalhamos com os tamanhos P, M, G e GG. Nossas camisetas têm caimento regular. Consulte nossa tabela de medidas na página do produto para escolher o tamanho ideal.',
-            open: false
-          },
-          {
-            question: 'Qual o prazo de entrega?',
-            answer: 'O prazo de entrega varia de acordo com sua localização. Para capitais e regiões metropolitanas, em média 3-7 dias úteis. Para demais localidades, 7-15 dias úteis. Você recebe o código de rastreamento por e-mail.',
-            open: false
-          },
-          {
-            question: 'Quais as formas de pagamento?',
-            answer: 'Aceitamos Pix (com 5% de desconto), cartões de crédito em até 12x, cartões de débito e boleto bancário. Todas as transações são seguras e criptografadas.',
-            open: false
-          },
-          {
-            question: 'Posso trocar ou devolver?',
-            answer: 'Sim! Você tem até 7 dias após o recebimento para solicitar a devolução, conforme o Código de Defesa do Consumidor. Para trocas por tamanho, o prazo é de 30 dias. O produto deve estar sem uso e com as etiquetas.',
-            open: false
-          },
-          {
-            question: 'O tecido é de boa qualidade?',
-            answer: 'Sim! Usamos 100% algodão premium de alta gramatura (180g/m²), que proporciona maior durabilidade e conforto. Nossas estampas são em silk screen de alta qualidade, resistentes a lavagens.',
-            open: false
-          },
-          {
-            question: 'Vocês enviam para todo o Brasil?',
-            answer: 'Sim! Enviamos para todos os estados brasileiros. O frete é GRÁTIS para compras acima de R$ 199,00. Para valores abaixo, o custo do frete é calculado no checkout.',
-            open: false
-          }
-        ],
-        
-        // Computed
-        get cartCount() {
-          return this.cart.reduce((total, item) => total + item.quantity, 0);
-        },
-        
-        get cartTotal() {
-          return this.cart.reduce((total, item) => total + (item.price * item.quantity), 0);
-        },
-        
-        // Methods
-        initApp() {
-          // Load cart from localStorage
-          const savedCart = localStorage.getItem('bravosbrasil_cart');
-          if (savedCart) {
-            this.cart = JSON.parse(savedCart);
-          }
-          
-          // Load dark mode preference
-          const savedDarkMode = localStorage.getItem('bravosbrasil_darkmode');
-          if (savedDarkMode) {
-            this.darkMode = JSON.parse(savedDarkMode);
-          }
-          
-          // Scroll listener for navbar
-          window.addEventListener('scroll', () => {
-            this.scrolled = window.scrollY > 50;
-          });
-          
-          // Initialize AOS
-          AOS.init({
-            duration: 800,
-            once: true,
-            offset: 100
-          });
-          
-          // Initialize Swiper
-          this.$nextTick(() => {
-            new Swiper('.productSwiper', {
-              slidesPerView: 1,
-              spaceBetween: 20,
-              loop: true,
-              autoplay: {
-                delay: 3000,
-                disableOnInteraction: false,
-              },
-              pagination: {
-                el: '.swiper-pagination',
-                clickable: true,
-              },
-              breakpoints: {
-                640: {
-                  slidesPerView: 2,
-                },
-                768: {
-                  slidesPerView: 3,
-                },
-                1024: {
-                  slidesPerView: 4,
-                },
-              },
-            });
-          });
-        },
-        
-        scrollTo(id) {
-          const element = document.getElementById(id);
-          if (element) {
-            const offset = 80;
-            const elementPosition = element.getBoundingClientRect().top;
-            const offsetPosition = elementPosition + window.pageYOffset - offset;
-            
-            window.scrollTo({
-              top: offsetPosition,
-              behavior: 'smooth'
-            });
-          }
-        },
-        
-        toggleDarkMode() {
-          this.darkMode = !this.darkMode;
-          localStorage.setItem('bravosbrasil_darkmode', JSON.stringify(this.darkMode));
-        },
-        
-        addToCart(product) {
-          const existingItem = this.cart.find(
-            item => item.id === product.id && item.size === product.selectedSize
-          );
-          
-          if (existingItem) {
-            existingItem.quantity += product.quantity;
-          } else {
-            this.cart.push({
-              id: product.id,
-              name: product.name,
-              price: product.price,
-              image: product.image,
-              size: product.selectedSize,
-              quantity: product.quantity
-            });
-          }
-          
-          this.saveCart();
-          this.showToast('Produto adicionado ao carrinho!', 'success');
-          
-          // Reset quantity
-          product.quantity = 1;
-        },
-        
-        removeFromCart(index) {
-          this.cart.splice(index, 1);
-          this.saveCart();
-          this.showToast('Produto removido do carrinho', 'success');
-        },
-        
-        updateQuantity(index, change) {
-          const item = this.cart[index];
-          const newQuantity = item.quantity + change;
-          
-          if (newQuantity > 0) {
-            item.quantity = newQuantity;
-            this.saveCart();
-          }
-        },
-        
-        saveCart() {
-          localStorage.setItem('bravosbrasil_cart', JSON.stringify(this.cart));
-        },
-        
-        toggleFaq(index) {
-          this.faqs[index].open = !this.faqs[index].open;
-        },
-        
-        showToast(message, type = 'success') {
-          this.toast.message = message;
-          this.toast.type = type;
-          this.toast.show = true;
-          
-          setTimeout(() => {
-            this.toast.show = false;
-          }, 3000);
-        },
-        
-        subscribeNewsletter() {
-          this.showToast('Cadastro realizado com sucesso! Verifique seu e-mail.', 'success');
-          this.newsletter = { name: '', email: '', phone: '' };
-        },
-        
-        async fetchAddress() {
-          const cep = this.checkout.cep.replace(/\D/g, '');
-          if (cep.length === 8) {
-            try {
-              const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-              const data = await response.json();
-              
-              if (!data.erro) {
-                this.checkout.address = data.logradouro;
-                this.checkout.neighborhood = data.bairro;
-                this.checkout.city = data.localidade;
-                this.checkout.state = data.uf;
-              }
-            } catch (error) {
-              console.error('Erro ao buscar CEP:', error);
-            }
-          }
-        },
-        
-        finalizePurchase() {
-          // Build WhatsApp message
-          let message = `*NOVO PEDIDO - BRAVOS BRASIL*%0A%0A`;
-          message += `*Dados do Cliente:*%0A`;
-          message += `Nome: ${this.checkout.name}%0A`;
-          message += `E-mail: ${this.checkout.email}%0A`;
-          message += `WhatsApp: ${this.checkout.phone}%0A%0A`;
-          
-          message += `*Endereço de Entrega:*%0A`;
-          message += `${this.checkout.address}, ${this.checkout.number}%0A`;
-          if (this.checkout.complement) {
-            message += `Complemento: ${this.checkout.complement}%0A`;
-          }
-          message += `Bairro: ${this.checkout.neighborhood}%0A`;
-          message += `Cidade: ${this.checkout.city} - ${this.checkout.state}%0A`;
-          message += `CEP: ${this.checkout.cep}%0A%0A`;
-          
-          message += `*Itens do Pedido:*%0A`;
-          this.cart.forEach((item, index) => {
-            message += `${index + 1}. ${item.name}%0A`;
-            message += `   Tamanho: ${item.size} | Qtd: ${item.quantity} | R$ ${(item.price * item.quantity).toFixed(2).replace('.', ',')}%0A`;
-          });
-          
-          message += `%0A*Total: R$ ${this.cartTotal.toFixed(2).replace('.', ',')}*%0A`;
-          message += `Frete: Grátis%0A%0A`;
-          message += `Aguardo confirmação do pedido!`;
-          
-          // Open WhatsApp
-          const whatsappUrl = `https://wa.me/5511999999999?text=${message}`;
-          window.open(whatsappUrl, '_blank');
-          
-          // Clear cart
-          this.cart = [];
-          this.saveCart();
-          this.openCheckout = false;
-          this.openCart = false;
-          
-          this.showToast('Pedido enviado! Redirecionando para o WhatsApp...', 'success');
-        }
-      };
-    }
-  </script>
   
   <!-- Service Worker Registration (PWA) -->
   <script>
