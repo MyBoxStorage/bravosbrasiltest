@@ -10,7 +10,7 @@
   
   <!-- Primary SEO -->
   <title>BRAVOS BRASIL | Camisetas Premium Patrióticas - Vista Seu Orgulho</title>
-  <meta name="description" content="Camisetas premium com estampas exclusivas com identidade nacional. 100% algodão brasileiro, estampas de alta qualidade. Deus, Família, Pátria. Frete grátis para todo o Brasil.">
+  <meta name="description" content="Camisetas premium com estampas patrióticas. 100% algodão brasileiro, estampas de alta qualidade. Deus, Família, Pátria. Frete grátis para todo o Brasil.">
   <meta name="keywords" content="camisetas patrióticas, camisetas Brasil, moda conservadora, camisetas verde e amarelo, orgulho brasileiro">
   <meta name="author" content="BRAVOS BRASIL">
   <meta name="robots" content="index, follow">
@@ -20,7 +20,7 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://bravosbrasil.com.br">
   <meta property="og:title" content="BRAVOS BRASIL | Camisetas Premium Patrióticas">
-  <meta property="og:description" content="Vista seu orgulho brasileiro com camisetas premium de alta qualidade. Estampas exclusivas com identidade nacional.">
+  <meta property="og:description" content="Vista seu orgulho brasileiro com camisetas premium de alta qualidade. Estampas patrióticas.">
   <meta property="og:image" content="https://bravosbrasil.com.br/og-image.jpg">
   
   <!-- Twitter -->
@@ -204,8 +204,8 @@
           deviceFingerprint: null,
           previewsGeradas: 0,
           // Wizard Mode
-          advancedMode: true, // Start in advanced mode by default
-          wizardMode: false, // Internal wizard state (inverse of advancedMode)
+          advancedMode: false, // Start em modo guiado por padrão
+          wizardMode: true,
           wizardStep: 1,
           wizard: {
             style: null,
@@ -218,7 +218,8 @@
             password: '',
             nome: '',
             telefone: '',
-            isRegister: false
+            isRegister: false,
+            isLoading: false
           },
           
           // Banco de dados de prompts por categoria
@@ -917,6 +918,11 @@
         // Authentication Methods
         async checkAuth() {
           const token = localStorage.getItem('bravosbrasil_token');
+          // Ensure tentativasRestantes is initialized
+          if (this.geradorEstampas.tentativasRestantes === undefined || this.geradorEstampas.tentativasRestantes === null) {
+            this.geradorEstampas.tentativasRestantes = 10;
+          }
+          
           if (token) {
             this.auth.token = token;
             try {
@@ -932,6 +938,8 @@
                 // Update attempts counter
                 if (this.auth.user && this.auth.user.tentativas_restantes !== undefined) {
                   this.geradorEstampas.tentativasRestantes = this.auth.user.tentativas_restantes;
+                } else {
+                  this.geradorEstampas.tentativasRestantes = 10;
                 }
                 await this.checkTentativas();
                 // Recarregar cache após autenticação
@@ -941,108 +949,227 @@
               }
             } catch (error) {
               console.error('Erro ao verificar autenticação:', error);
+              // Ensure value is set even on error
+              if (!this.auth.isAuthenticated) {
+                this.geradorEstampas.tentativasRestantes = 10;
+              }
             }
+          } else {
+            // No token, ensure default value
+            this.geradorEstampas.tentativasRestantes = 10;
           }
         },
         
-        async login() {
-          try {
-            const endpoint = this.geradorEstampas.loginForm.isRegister ? '/api/auth/register' : '/api/auth/login';
-            const body = this.geradorEstampas.loginForm.isRegister 
-              ? {
-                  email: this.geradorEstampas.loginForm.email,
-                  password: this.geradorEstampas.loginForm.password,
-                  nome: this.geradorEstampas.loginForm.nome,
-                  telefone: this.geradorEstampas.loginForm.telefone
-                }
-              : {
-                  email: this.geradorEstampas.loginForm.email,
-                  password: this.geradorEstampas.loginForm.password
-                };
+        // Helper method to handle post-authentication actions
+        async handlePostAuth() {
+          // Recarregar cache após login
+          this.loadStampCache();
+          
+          // Handle post-login actions
+          const wasSavingStamp = this.geradorEstampas.loginModalContext === 'save_stamp' && this.geradorEstampas.isPreview;
+          
+          if (wasSavingStamp) {
+            // Convert preview to saved stamp
+            this.geradorEstampas.isPreview = false;
             
-            const response = await fetch(endpoint, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(body)
-            });
-            
-            const data = await response.json();
-            
-            if (response.ok) {
-              this.auth.token = data.token;
-              this.auth.user = data.user;
-              this.auth.isAuthenticated = true;
-              localStorage.setItem('bravosbrasil_token', data.token);
-              this.geradorEstampas.tentativasRestantes = data.user.tentativas_restantes;
-              // Recarregar cache após login
-              this.loadStampCache();
+            // Save stamp (call API)
+            try {
+              let imagePayload = null;
+              if (this.geradorEstampas.imageFile) {
+                imagePayload = await this.fileToBase64(this.geradorEstampas.imageFile);
+              }
               
-              // NEW: Handle post-login actions
-              const wasSavingStamp = this.geradorEstampas.loginModalContext === 'save_stamp' && this.geradorEstampas.isPreview;
+              const saveResponse = await fetch('/api/stamps/generate', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${this.auth.token}`
+                },
+                body: JSON.stringify({
+                  prompt: (this.geradorEstampas.prompt || '').substring(0, 500),
+                  image: imagePayload
+                })
+              });
               
-              if (wasSavingStamp) {
-                // Convert preview to saved stamp
-                this.geradorEstampas.isPreview = false;
+              const saveData = await saveResponse.json();
+              
+              if (saveResponse.ok) {
+                this.geradorEstampas.generatedImageUrl = saveData.imageUrl;
+                this.geradorEstampas.tentativasRestantes = saveData.tentativas_restantes;
+                this.geradorEstampas.estampaId = saveData.estampa_id;
                 
-                // Save stamp (call API)
-                try {
-                  let imagePayload = null;
-                  if (this.geradorEstampas.imageFile) {
-                    imagePayload = await this.fileToBase64(this.geradorEstampas.imageFile);
-                  }
-                  
-                  const saveResponse = await fetch('/api/stamps/generate', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'Authorization': `Bearer ${this.auth.token}`
-                    },
-              body: JSON.stringify({
-                prompt: (this.geradorEstampas.prompt || '').substring(0, 500), // Garantir máximo de 500 caracteres
-                image: imagePayload
-              })
-                  });
-                  
-                  const saveData = await saveResponse.json();
-                  
-                  if (saveResponse.ok) {
-                    this.geradorEstampas.generatedImageUrl = saveData.imageUrl;
-                    this.geradorEstampas.tentativasRestantes = saveData.tentativas_restantes;
-                    this.geradorEstampas.estampaId = saveData.estampa_id;
-                    
-                    // Salvar no cache
-                    this.saveStampToCache({
-                      id: saveData.estampa_id,
-                      imageUrl: saveData.imageUrl,
-                      prompt: this.geradorEstampas.prompt,
-                      timestamp: Date.now()
-                    });
-                    
-                    // Auto-add to cart
-                    await this.addToCartWithStamp();
-                    
-                    this.showToast('✅ Estampa salva e adicionada ao carrinho!', 'success');
-                  } else {
-                    this.showToast('Erro ao salvar estampa', 'error');
-                  }
-                } catch (error) {
-                  console.error('Erro ao salvar estampa:', error);
-                  this.showToast('Erro ao salvar estampa', 'error');
-                }
+                // Salvar no cache
+                this.saveStampToCache({
+                  id: saveData.estampa_id,
+                  imageUrl: saveData.imageUrl,
+                  prompt: this.geradorEstampas.prompt,
+                  timestamp: Date.now()
+                });
+                
+                // Auto-add to cart
+                await this.addToCartWithStamp();
+                
+                this.showToast('✅ Estampa salva e adicionada ao carrinho!', 'success');
+              } else {
+                this.showToast('Erro ao salvar estampa', 'error');
               }
-              
-              this.geradorEstampas.openLoginModal = false;
-              this.geradorEstampas.loginModalContext = null;
-              
-              if (!wasSavingStamp) {
-                this.showToast('Login realizado com sucesso!', 'success');
-              }
-            } else {
-              this.showToast(data.error || 'Erro ao fazer login', 'error');
+            } catch (error) {
+              console.error('Erro ao salvar estampa:', error);
+              this.showToast('Erro ao salvar estampa', 'error');
             }
+          }
+          
+          this.geradorEstampas.openLoginModal = false;
+          this.geradorEstampas.loginModalContext = null;
+        },
+
+        async register() {
+          // Validate fields first
+          if (!this.geradorEstampas.loginForm.nome || !this.geradorEstampas.loginForm.email || !this.geradorEstampas.loginForm.password) {
+            this.showToast('⚠️ Preencha todos os campos obrigatórios', 'warning');
+            return;
+          }
+
+          // Validate email format
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(this.geradorEstampas.loginForm.email)) {
+            this.showToast('⚠️ Digite um email válido', 'warning');
+            return;
+          }
+
+          // Validate password length
+          if (this.geradorEstampas.loginForm.password.length < 6) {
+            this.showToast('⚠️ A senha deve ter no mínimo 6 caracteres', 'warning');
+            return;
+          }
+
+          this.geradorEstampas.loginForm.isLoading = true;
+
+          try {
+            const response = await fetch('/api/auth/register', {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                nome: this.geradorEstampas.loginForm.nome.trim(),
+                email: this.geradorEstampas.loginForm.email.trim().toLowerCase(),
+                senha: this.geradorEstampas.loginForm.password,
+                telefone: this.geradorEstampas.loginForm.telefone ? this.geradorEstampas.loginForm.telefone.trim() : null
+              })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+              // Show SPECIFIC error messages
+              if (response.status === 409 || (data.error && data.error.includes('já existe'))) {
+                this.showToast('❌ Este email já está cadastrado. Faça login.', 'error');
+              } else if (response.status === 400) {
+                this.showToast(`⚠️ ${data.error || 'Dados inválidos'}`, 'warning');
+              } else {
+                this.showToast(`❌ ${data.error || 'Erro ao criar conta'}`, 'error');
+              }
+              return;
+            }
+
+            // SUCCESS - Auto login with the new account
+            this.auth.token = data.token;
+            this.auth.user = data.user;
+            this.auth.isAuthenticated = true;
+            localStorage.setItem('bravosbrasil_token', data.token);
+            
+            // Update attempts counter
+            this.geradorEstampas.tentativasRestantes = data.user.tentativas_restantes || 10;
+            
+            this.showToast('✅ Conta criada com sucesso! Bem-vindo(a)!', 'success');
+            
+            // Refresh remaining attempts from API
+            await this.checkTentativas();
+            
+            // Handle post-auth actions
+            await this.handlePostAuth();
+            
           } catch (error) {
-            console.error('Erro no login:', error);
-            this.showToast('Erro ao fazer login. Tente novamente.', 'error');
+            console.error('Register error:', error);
+            if (error.message && error.message.includes('Failed to fetch')) {
+              this.showToast('❌ Erro de conexão. Verifique sua internet e tente novamente.', 'error');
+            } else {
+              this.showToast('❌ Erro inesperado. Tente novamente em alguns segundos.', 'error');
+            }
+          } finally {
+            this.geradorEstampas.loginForm.isLoading = false;
+          }
+        },
+
+        async login() {
+          // Validate fields first
+          if (!this.geradorEstampas.loginForm.email || !this.geradorEstampas.loginForm.password) {
+            this.showToast('⚠️ Digite seu email e senha', 'warning');
+            return;
+          }
+
+          this.geradorEstampas.loginForm.isLoading = true;
+
+          try {
+            const response = await fetch('/api/auth/login', {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                email: this.geradorEstampas.loginForm.email.trim().toLowerCase(),
+                senha: this.geradorEstampas.loginForm.password
+              })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+              // Show SPECIFIC error messages based on status code
+              if (response.status === 401) {
+                this.showToast('❌ Email ou senha incorretos', 'error');
+              } else if (response.status === 404) {
+                this.showToast('❌ Usuário não encontrado. Crie uma conta primeiro.', 'error');
+              } else if (response.status === 400) {
+                this.showToast('⚠️ Dados inválidos. Verifique email e senha.', 'warning');
+              } else {
+                this.showToast(`❌ ${data.error || 'Erro ao fazer login'}`, 'error');
+              }
+              return;
+            }
+
+            // SUCCESS
+            this.auth.token = data.token;
+            this.auth.user = data.user;
+            this.auth.isAuthenticated = true;
+            localStorage.setItem('bravosbrasil_token', data.token);
+            
+            // Update attempts counter
+            this.geradorEstampas.tentativasRestantes = data.user.tentativas_restantes || 10;
+            
+            const wasSavingStamp = this.geradorEstampas.loginModalContext === 'save_stamp' && this.geradorEstampas.isPreview;
+            
+            if (!wasSavingStamp) {
+              const firstName = data.user.nome ? data.user.nome.split(' ')[0] : 'Usuário';
+              this.showToast(`✅ Bem-vindo de volta, ${firstName}!`, 'success');
+            }
+            
+            // Refresh remaining attempts from API
+            await this.checkTentativas();
+            
+            // Handle post-auth actions
+            await this.handlePostAuth();
+            
+          } catch (error) {
+            console.error('Login error:', error);
+            if (error.message && error.message.includes('Failed to fetch')) {
+              this.showToast('❌ Erro de conexão. Verifique sua internet e tente novamente.', 'error');
+            } else {
+              this.showToast('❌ Erro inesperado. Tente novamente em alguns segundos.', 'error');
+            }
+          } finally {
+            this.geradorEstampas.loginForm.isLoading = false;
           }
         },
         
@@ -1050,7 +1177,7 @@
           this.auth.token = null;
           this.auth.user = null;
           this.auth.isAuthenticated = false;
-          this.geradorEstampas.tentativasRestantes = 0;
+          this.geradorEstampas.tentativasRestantes = 10; // Reset to default for non-authenticated users
           this.geradorEstampas.cacheEstampas = [];
           localStorage.removeItem('bravosbrasil_token');
           this.showToast('Logout realizado', 'success');
@@ -1403,7 +1530,7 @@
             
             ctx.font = '36px Arial';
             ctx.fillStyle = '#FFCC29';
-            const promptText = this.geradorEstampas.prompt || 'ESTAMPA COM IDENTIDADE NACIONAL';
+            const promptText = this.geradorEstampas.prompt || 'ESTAMPAS PATRIÓTICAS';
             const words = promptText.split(' ');
             let line = '';
             let y = 512;
@@ -1549,11 +1676,12 @@
         buildWizardPrompt() {
           const wizard = this.geradorEstampas.wizard;
           
+          // If style or theme not selected, show placeholder
           if (!wizard.style || !wizard.theme) {
             return 'Selecione o estilo e tema acima para ver o prompt...';
           }
           
-          // Style descriptions
+          // Style descriptions mapping
           const styleMap = {
             minimalista: 'estilo minimalista e clean',
             realista: 'estilo foto-realista e detalhado',
@@ -1565,54 +1693,67 @@
             pixel: 'estilo pixel art 8-bit retrô'
           };
           
-          // Theme descriptions
+          // Theme descriptions mapping
           const themeMap = {
-            bandeira: 'bandeira do Brasil com destaque',
-            aguia: 'águia brasileira majestosa em voo',
-            cristo: 'Cristo Redentor monumental',
-            amazonia: 'floresta amazônica exuberante',
-            ordem: 'frase ORDEM E PROGRESSO em destaque',
-            ipiranga: 'Grito do Ipiranga histórico',
-            verde_amarelo: 'cores verde e amarelo do Brasil',
-            onca: 'onça pintada brasileira poderosa',
-            futebol: 'temática futebol brasileiro'
+            bandeira: 'bandeira do Brasil com destaque nas cores verde, amarelo, azul e branco',
+            aguia: 'águia brasileira majestosa em voo, símbolo de liberdade',
+            cristo: 'Cristo Redentor monumental do Rio de Janeiro',
+            amazonia: 'floresta amazônica exuberante com fauna e flora brasileira',
+            ordem: 'frase ORDEM E PROGRESSO em destaque com elementos da bandeira',
+            ipiranga: 'Grito do Ipiranga, cena histórica da independência do Brasil',
+            verde_amarelo: 'composição abstrata com as cores verde e amarelo do Brasil',
+            onca: 'onça pintada brasileira poderosa em seu habitat natural',
+            futebol: 'temática futebol brasileiro com elementos icônicos do esporte'
           };
           
-          // Color descriptions
+          // Color scheme descriptions
           const colorMap = {
-            verde_amarelo: 'cores verde #00843D e amarelo #FFCC29',
-            verde: 'tons de verde brasileiro',
-            amarelo: 'tons de amarelo vibrante',
-            azul: 'tons de azul brasileiro',
-            vibrante: 'cores vibrantes e saturadas'
+            verde_amarelo: 'cores predominantes verde #00843D e amarelo #FFCC29',
+            verde: 'tons de verde brasileiro #00843D como cor principal',
+            amarelo: 'tons de amarelo vibrante #FFCC29 como cor principal',
+            azul: 'tons de azul brasileiro #002776 como cor principal',
+            vibrante: 'cores vibrantes e saturadas com alto contraste'
           };
           
-          let prompt = `Crie uma estampa patriótica brasileira profissional para camiseta: `;
+          // Build the complete prompt
+          let prompt = `Crie uma estampa patriótica brasileira profissional para silk screen em camiseta: `;
           prompt += `${themeMap[wizard.theme]}, `;
           prompt += `${styleMap[wizard.style]}, `;
           prompt += `${colorMap[wizard.colors]}, `;
-          prompt += `alta resolução 1024x1024px, `;
-          prompt += `fundo transparente, `;
-          prompt += `design centralizado para silk screen`;
+          prompt += `composição centralizada, `;
+          prompt += `alta resolução 1024x1024 pixels, `;
+          prompt += `fundo transparente PNG, `;
+          prompt += `adequado para impressão em tecido`;
           
-          if (wizard.customDetails.trim()) {
+          // Add custom details if provided
+          if (wizard.customDetails && wizard.customDetails.trim()) {
             prompt += `, ${wizard.customDetails.trim()}`;
           }
           
           return prompt;
         },
         
+        // Generate stamp from wizard selections
         async generateFromWizard() {
-          // Build prompt from wizard selections
+          // Build the final prompt from wizard selections
           const finalPrompt = this.buildWizardPrompt();
           
-          // Set it to the main prompt field
+          // Check if prompt is valid (not placeholder text)
+          if (finalPrompt.includes('Selecione o estilo')) {
+            this.showToast('⚠️ Complete todas as etapas do assistente', 'warning');
+            return;
+          }
+          
+          // Set the prompt in the main form
           this.geradorEstampas.prompt = finalPrompt;
           
-          // Call the existing generate function
+          // Show toast with friendly message
+          this.showToast('🎨 Gerando sua estampa patriótica...', 'info');
+          
+          // Call the existing generateStamp function
           await this.generateStamp();
           
-          // Reset wizard
+          // Reset wizard to initial state for next use
           this.geradorEstampas.wizardStep = 1;
           this.geradorEstampas.wizard = {
             style: null,
@@ -1620,6 +1761,9 @@
             colors: 'verde_amarelo',
             customDetails: ''
           };
+          
+          // Keep the prompt visible so user can see/edit it
+          // (Don't clear geradorEstampas.prompt)
         },
         
         // Funções do guia
@@ -1697,7 +1841,7 @@
         // Action templates
         actions: [
           { type: 'generated', text: 'acabou de criar uma estampa' },
-          { type: 'generated', text: 'gerou uma estampa com identidade nacional' },
+          { type: 'generated', text: 'gerou uma estampa patriótica' },
           { type: 'cart', text: 'adicionou ao carrinho' },
           { type: 'cart', text: 'selecionou uma camisa personalizada' },
           { type: 'purchase', text: 'finalizou uma compra' },
@@ -2654,7 +2798,7 @@
           data-aos-delay="200"
           class="text-xl md:text-2xl text-white/90 mb-10 max-w-2xl mx-auto"
         >
-          Camisetas premium com estampas exclusivas com identidade nacional. 
+          Camisetas premium com estampas patrióticas. 
           Qualidade incomparável para quem ama o Brasil.
         </p>
         
@@ -2911,159 +3055,111 @@
             </div>
           </div>
 
-          <!-- Attempts Counter - Gamified -->
-          <div x-show="auth.isAuthenticated" 
-               class="mb-8 bg-gradient-to-r from-green-50 to-yellow-50 dark:from-gray-800 dark:to-gray-800 border-2 rounded-2xl p-6 shadow-lg"
+          <!-- Counter Section -->
+          <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-xl mb-8 border-2"
                :class="{
-                 'border-green-300 dark:border-green-600': geradorEstampas.tentativasRestantes > 5,
-                 'border-yellow-300 dark:border-yellow-600': geradorEstampas.tentativasRestantes <= 5 && geradorEstampas.tentativasRestantes > 2,
-                 'border-red-300 dark:border-red-600 animate-pulse': geradorEstampas.tentativasRestantes <= 2
+                 'border-green-400': auth.isAuthenticated && geradorEstampas.tentativasRestantes > 5,
+                 'border-yellow-400': auth.isAuthenticated && geradorEstampas.tentativasRestantes <= 5 && geradorEstampas.tentativasRestantes > 2,
+                 'border-red-400': auth.isAuthenticated && geradorEstampas.tentativasRestantes <= 2,
+                 'border-blue-400': !auth.isAuthenticated
                }">
-            
-            <div class="flex items-center justify-between mb-4">
-              <div class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-brasil-green to-brasil-yellow flex items-center justify-center shadow-lg">
-                  <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
-                  </svg>
-                </div>
-                <div>
-                  <h4 class="font-bold text-lg text-gray-800 dark:text-white">
-                    Suas Estampas Grátis
-                  </h4>
-                  <p class="text-sm text-gray-600 dark:text-gray-400">
-                    <span x-show="geradorEstampas.tentativasRestantes > 2">
-                      Você tem <strong class="text-brasil-green" x-text="geradorEstampas.tentativasRestantes"></strong> estampas disponíveis
-                    </span>
-                    <span x-show="geradorEstampas.tentativasRestantes <= 2 && geradorEstampas.tentativasRestantes > 0" class="text-orange-600 dark:text-orange-400 font-semibold">
-                      ⚠️ Restam apenas <span x-text="geradorEstampas.tentativasRestantes"></span> estampas!
-                    </span>
-                    <span x-show="geradorEstampas.tentativasRestantes === 0" class="text-red-600 dark:text-red-400 font-semibold">
-                      🚫 Você usou todas as estampas
-                    </span>
-                  </p>
-                </div>
-              </div>
+
+            <h4 class="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+              <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"></path>
+              </svg>
+              <span x-show="auth.isAuthenticated">Suas Estampas Grátis</span>
+              <span x-show="!auth.isAuthenticated">🎁 10 Estampas Grátis</span>
+            </h4>
+
+            <!-- LOGGED IN - HAS ATTEMPTS (>0) -->
+            <div x-show="auth.isAuthenticated && geradorEstampas.tentativasRestantes > 0">
+              <p class="text-gray-700 dark:text-gray-300 text-lg mb-4">
+                Você tem <strong class="text-brasil-green" x-text="geradorEstampas.tentativasRestantes"></strong> estampas disponíveis
+              </p>
               
-              <!-- Counter Badge -->
-              <div class="text-right">
-                <div class="text-4xl font-bold font-display"
-                     :class="{
-                       'text-brasil-green': geradorEstampas.tentativasRestantes > 5,
-                       'text-yellow-600': geradorEstampas.tentativasRestantes <= 5 && geradorEstampas.tentativasRestantes > 2,
-                       'text-red-600': geradorEstampas.tentativasRestantes <= 2
-                     }">
-                  <span x-text="geradorEstampas.tentativasRestantes"></span>/<span class="text-2xl text-gray-400">10</span>
+              <!-- Visual Counter -->
+              <div class="flex items-center justify-center gap-4 mb-4">
+                <div class="text-center">
+                  <div class="text-4xl font-bold" 
+                       :class="{
+                         'text-green-600': geradorEstampas.tentativasRestantes > 5,
+                         'text-yellow-600': geradorEstampas.tentativasRestantes <= 5 && geradorEstampas.tentativasRestantes > 2,
+                         'text-red-600': geradorEstampas.tentativasRestantes <= 2
+                       }">
+                    <span x-text="geradorEstampas.tentativasRestantes"></span>
+                    <span class="text-2xl text-gray-500">/10</span>
+                  </div>
+                  <p class="text-sm text-gray-500 mt-1">estampas</p>
                 </div>
-                <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                  estampas
-                </p>
-              </div>
-            </div>
-
-            <!-- Visual Progress Bar -->
-            <div class="mb-4">
-              <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                <div class="h-full transition-all duration-500 ease-out rounded-full"
-                     :style="`width: ${(geradorEstampas.tentativasRestantes / 10) * 100}%`"
-                     :class="{
-                       'bg-gradient-to-r from-green-400 to-green-600': geradorEstampas.tentativasRestantes > 5,
-                       'bg-gradient-to-r from-yellow-400 to-yellow-600': geradorEstampas.tentativasRestantes <= 5 && geradorEstampas.tentativasRestantes > 2,
-                       'bg-gradient-to-r from-red-400 to-red-600': geradorEstampas.tentativasRestantes <= 2
-                     }">
+                
+                <!-- Dots visualization -->
+                <div class="flex gap-1">
+                  <template x-for="i in 10" :key="i">
+                    <div class="w-2 h-2 rounded-full"
+                         :class="i <= geradorEstampas.tentativasRestantes ? 'bg-brasil-green' : 'bg-gray-300'"></div>
+                  </template>
                 </div>
               </div>
             </div>
 
-            <!-- Dots Visualization -->
-            <div class="flex items-center justify-center gap-2 mb-4">
-              <template x-for="i in 10" :key="i">
-                <div class="w-3 h-3 rounded-full transition-all duration-300"
-                     :class="{
-                       'bg-gradient-to-br from-brasil-green to-brasil-yellow scale-110 shadow-md': i <= geradorEstampas.tentativasRestantes,
-                       'bg-gray-300 dark:bg-gray-600 scale-75 opacity-40': i > geradorEstampas.tentativasRestantes
-                     }">
-                </div>
-              </template>
-            </div>
-
-            <!-- Information Box -->
-            <div class="bg-white/50 dark:bg-gray-900/50 rounded-xl p-4 backdrop-blur-sm">
-              <div class="flex items-start gap-3">
-                <div class="flex-shrink-0">
-                  <svg class="w-5 h-5 text-brasil-yellow" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
-                  </svg>
-                </div>
-                <div class="text-sm text-gray-700 dark:text-gray-300">
-                  <p class="font-semibold mb-1">💡 Como ganhar mais estampas:</p>
-                  <ul class="space-y-1 text-xs">
-                    <li class="flex items-center gap-2">
-                      <span class="text-green-500">✓</span>
-                      <span>Compre qualquer camisa → <strong class="text-brasil-green">+10 estampas</strong></span>
-                    </li>
-                    <li class="flex items-center gap-2">
-                      <span class="text-green-500">✓</span>
-                      <span>Cada compra recarrega suas estampas automaticamente</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            <!-- CTA when attempts run low -->
-            <div x-show="geradorEstampas.tentativasRestantes <= 2 && geradorEstampas.tentativasRestantes > 0"
-                 x-transition
-                 class="mt-4 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl p-4 text-center">
-              <p class="font-bold mb-2">🔥 Suas estampas estão acabando!</p>
-              <p class="text-sm mb-3 opacity-90">
+            <!-- LOGGED IN - LOW ATTEMPTS (1-2) - WARNING -->
+            <div x-show="auth.isAuthenticated && geradorEstampas.tentativasRestantes > 0 && geradorEstampas.tentativasRestantes <= 2"
+                 class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4 mb-4">
+              <p class="text-red-800 dark:text-red-200 font-semibold mb-2">
+                🔥 Suas estampas estão acabando!
+              </p>
+              <p class="text-sm text-red-700 dark:text-red-300">
                 Não perca suas criações. Compre uma camisa agora e ganhe +10 estampas.
               </p>
-              <a href="#produtos" 
-                 class="inline-block bg-white text-orange-600 font-bold px-6 py-2 rounded-full hover:bg-gray-100 transition-colors text-sm">
+              <a href="#produtos" class="inline-block mt-3 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-sm">
                 VER CAMISETAS →
               </a>
             </div>
 
-            <!-- CTA when no attempts left -->
-            <div x-show="geradorEstampas.tentativasRestantes === 0"
-                 x-transition
-                 class="mt-4 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl p-4 text-center">
-              <p class="font-bold text-lg mb-2">🚫 Você usou todas as estampas!</p>
-              <p class="text-sm mb-4 opacity-90">
+            <!-- LOGGED IN - ZERO ATTEMPTS -->
+            <div x-show="auth.isAuthenticated && geradorEstampas.tentativasRestantes === 0">
+              <p class="text-red-600 dark:text-red-400 font-bold text-lg mb-4">
+                🚫 Você usou todas as estampas!
+              </p>
+              <p class="text-gray-700 dark:text-gray-300 mb-4">
                 Quer continuar criando? Compre uma camisa e ganhe +10 estampas grátis.
               </p>
-              <div class="flex flex-col sm:flex-row gap-3 justify-center">
+              <div class="flex flex-col sm:flex-row gap-3">
                 <a href="#produtos" 
-                   class="inline-block bg-white text-red-600 font-bold px-6 py-3 rounded-full hover:bg-gray-100 transition-colors">
+                   class="flex-1 bg-brasil-green hover:bg-green-700 text-white font-bold py-3 px-6 rounded-xl text-center">
                   🛒 COMPRAR CAMISA
                 </a>
-                <button class="bg-white/20 hover:bg-white/30 text-white font-semibold px-6 py-3 rounded-full transition-colors">
+                <button class="flex-1 bg-brasil-yellow hover:bg-yellow-500 text-brasil-dark font-bold py-3 px-6 rounded-xl">
                   💰 COMPRAR SÓ ESTAMPAS (R$ 29,90)
                 </button>
               </div>
             </div>
 
-          </div>
-
-          <!-- Show login CTA when not authenticated -->
-          <div x-show="!auth.isAuthenticated" 
-               class="mb-8 bg-gradient-to-r from-brasil-green to-brasil-yellow text-white rounded-2xl p-6 shadow-xl text-center">
-            <div class="flex items-center justify-center gap-3 mb-3">
-              <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
-                </svg>
-              </div>
-              <h4 class="text-2xl font-bold">🎁 10 Estampas Grátis para criar sua camisa personalizada agora</h4>
+            <!-- NOT LOGGED IN - SHOW SIGNUP CTA -->
+            <div x-show="!auth.isAuthenticated">
+              <p class="text-gray-700 dark:text-gray-300 text-lg mb-4">
+                🎁 <strong>10 Estampas Grátis</strong> para criar sua camisa personalizada agora
+              </p>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Crie uma conta em 30 segundos e comece a gerar estampas únicas agora
+              </p>
+              <button @click="geradorEstampas.openLoginModal = true; geradorEstampas.loginForm.isRegister = true"
+                      class="w-full bg-brasil-green hover:bg-green-700 text-white font-bold py-4 rounded-xl transition-all transform hover:scale-105">
+                🎁 CRIAR CONTA E GANHAR 10 ESTAMPAS GRÁTIS
+              </button>
             </div>
-            <p class="mb-4 opacity-90">
-              Crie uma conta em 30 segundos e comece a gerar estampas únicas agora
-            </p>
-            <button @click="geradorEstampas.openLoginModal = true" 
-                    class="bg-white text-brasil-green font-bold px-8 py-3 rounded-full hover:bg-gray-100 transition-colors shadow-lg">
-              🎁 CRIAR CONTA E GANHAR 10 ESTAMPAS GRÁTIS
-            </button>
+
+            <!-- Info box -->
+            <div class="mt-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+              <p class="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-2">
+                💡 Como ganhar mais estampas:
+              </p>
+              <ul class="text-sm text-blue-800 dark:text-blue-300 space-y-1">
+                <li>✓ Compre qualquer camisa → <strong>+10 estampas</strong></li>
+                <li>✓ Cada compra recarrega suas estampas automaticamente</li>
+              </ul>
+            </div>
           </div>
 
           <!-- Formulário -->
@@ -3081,7 +3177,7 @@
                   </div>
                   <div class="ml-3">
                     <p class="text-sm font-medium text-green-800 dark:text-green-200">
-                      🎨 Perfeito para iniciantes! Vamos guiar você passo a passo na criação da sua estampa com identidade nacional
+                      🎨 Perfeito para iniciantes! Vamos guiar você passo a passo na criação da sua estampa patriótica
                     </p>
                   </div>
                 </div>
@@ -3210,241 +3306,323 @@
               <!-- MODO GUIADO - ESTRUTURA 3 PASSOS PATRIÓTICA -->
               <div x-show="!geradorEstampas.advancedMode" x-transition class="space-y-6">
                 
-                <!-- STEP 1: Escolha do Estilo -->
-                <div class="guide-step-container">
-                  <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-4">
-                    🎨 Passo 1: Escolha o Estilo
-                  </h3>
+                <!-- Wizard Progress Indicator -->
+                <div x-show="geradorEstampas.wizardMode" 
+                     x-transition
+                     class="mb-8">
+                  <div class="flex items-center justify-between">
+                    <template x-for="(step, index) in ['Estilo', 'Tema', 'Detalhes']" :key="index">
+                      <div class="flex items-center" :class="index < 2 ? 'flex-1' : ''">
+                        <!-- Step Circle -->
+                        <div class="flex items-center justify-center w-10 h-10 rounded-full font-bold text-sm transition-all"
+                             :class="{
+                               'bg-brasil-green text-white shadow-lg': geradorEstampas.wizardStep > index + 1,
+                               'bg-brasil-yellow text-brasil-dark shadow-lg scale-110': geradorEstampas.wizardStep === index + 1,
+                               'bg-gray-300 dark:bg-gray-700 text-gray-500': geradorEstampas.wizardStep < index + 1
+                             }">
+                          <span x-show="geradorEstampas.wizardStep > index + 1">✓</span>
+                          <span x-show="geradorEstampas.wizardStep <= index + 1" x-text="index + 1"></span>
+                        </div>
+                        
+                        <!-- Step Label -->
+                        <div class="ml-2 hidden sm:block">
+                          <p class="text-sm font-semibold transition-colors" 
+                             :class="geradorEstampas.wizardStep >= index + 1 ? 'text-gray-800 dark:text-white' : 'text-gray-400'"
+                             x-text="step"></p>
+                        </div>
+                        
+                        <!-- Connector Line -->
+                        <div x-show="index < 2" 
+                             class="flex-1 h-1 mx-4 rounded transition-colors"
+                             :class="geradorEstampas.wizardStep > index + 1 ? 'bg-brasil-green' : 'bg-gray-300 dark:bg-gray-700'"></div>
+                      </div>
+                    </template>
+                  </div>
                   
-                  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <button
-                      @click="geradorEstampas.wizard.style = 'minimalista'; geradorEstampas.wizardStep = 2"
-                      :class="geradorEstampas.wizard.style === 'minimalista' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
-                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
-                      <div class="text-3xl mb-2">✨</div>
-                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Minimalista</div>
+                  <!-- Mobile Step Label -->
+                  <div class="sm:hidden text-center mt-3">
+                    <p class="text-sm font-semibold text-gray-800 dark:text-white">
+                      Passo <span x-text="geradorEstampas.wizardStep"></span>: 
+                      <span x-text="['Estilo', 'Tema', 'Detalhes'][geradorEstampas.wizardStep - 1]"></span>
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Step 1: Choose Style -->
+                <div x-show="geradorEstampas.wizardMode && geradorEstampas.wizardStep === 1" 
+                     x-transition
+                     class="space-y-6">
+                  
+                  <div class="text-center mb-6">
+                    <h3 class="text-2xl font-bold text-gray-800 dark:text-white mb-2">
+                      🎨 Qual estilo você prefere?
+                    </h3>
+                    <p class="text-gray-600 dark:text-gray-400">
+                      Escolha o estilo visual da sua estampa
+                    </p>
+                  </div>
+
+                  <!-- Style Cards Grid -->
+                  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <template x-for="style in [
+                      { id: 'minimalista', name: 'Minimalista', emoji: '⚪', desc: 'Simples e clean', color: 'from-gray-100 to-gray-200' },
+                      { id: 'realista', name: 'Realista', emoji: '📸', desc: 'Foto-realista', color: 'from-blue-100 to-blue-200' },
+                      { id: 'ilustracao', name: 'Ilustração', emoji: '🎨', desc: 'Desenhado à mão', color: 'from-purple-100 to-purple-200' },
+                      { id: 'vintage', name: 'Vintage', emoji: '📻', desc: 'Retrô anos 80', color: 'from-orange-100 to-orange-200' },
+                      { id: 'abstrato', name: 'Abstrato', emoji: '🌀', desc: 'Formas geométricas', color: 'from-pink-100 to-pink-200' },
+                      { id: 'aquarela', name: 'Aquarela', emoji: '💧', desc: 'Efeito pintado', color: 'from-cyan-100 to-cyan-200' },
+                      { id: 'graffiti', name: 'Graffiti', emoji: '🎭', desc: 'Street art', color: 'from-red-100 to-red-200' },
+                      { id: 'pixel', name: 'Pixel Art', emoji: '👾', desc: '8-bit retrô', color: 'from-green-100 to-green-200' }
+                    ]" :key="style.id">
+                      <button @click="geradorEstampas.wizard.style = style.id"
+                              type="button"
+                              class="group relative p-5 rounded-2xl border-3 transition-all duration-300 text-left hover:scale-105 hover:shadow-xl"
+                              :class="geradorEstampas.wizard.style === style.id 
+                                ? 'border-brasil-green bg-gradient-to-br from-green-50 to-yellow-50 dark:from-green-900/30 dark:to-yellow-900/30 shadow-lg scale-105' 
+                                : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-brasil-green'">
+                        
+                        <!-- Selected Checkmark -->
+                        <div x-show="geradorEstampas.wizard.style === style.id"
+                             class="absolute -top-2 -right-2 bg-brasil-green text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg">
+                          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                          </svg>
+                        </div>
+
+                        <!-- Style Content -->
+                        <div class="text-5xl mb-3 transition-transform group-hover:scale-110" 
+                             x-text="style.emoji"></div>
+                        <p class="font-bold text-base text-gray-800 dark:text-white mb-1" 
+                           x-text="style.name"></p>
+                        <p class="text-xs text-gray-600 dark:text-gray-400" 
+                           x-text="style.desc"></p>
+                        
+                        <!-- Hover gradient background -->
+                        <div class="absolute inset-0 rounded-2xl bg-gradient-to-br opacity-0 group-hover:opacity-20 transition-opacity pointer-events-none"
+                             :class="style.color"></div>
+                      </button>
+                    </template>
+                  </div>
+
+                  <!-- Next Button -->
+                  <div class="pt-4">
+                    <button @click="geradorEstampas.wizardStep = 2" 
+                            type="button"
+                            :disabled="!geradorEstampas.wizard.style"
+                            class="w-full bg-brasil-yellow hover:bg-yellow-500 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50 text-brasil-dark font-bold py-5 px-6 rounded-xl transition-all transform hover:scale-105 shadow-lg disabled:transform-none disabled:shadow-none flex items-center justify-center gap-3 text-lg">
+                      <span x-show="!geradorEstampas.wizard.style">
+                        ⬆️ Escolha um estilo para continuar
+                      </span>
+                      <span x-show="geradorEstampas.wizard.style">
+                        Próximo: Escolher Tema Patriótico →
+                      </span>
                     </button>
-                    
-                    <button
-                      @click="geradorEstampas.wizard.style = 'realista'; geradorEstampas.wizardStep = 2"
-                      :class="geradorEstampas.wizard.style === 'realista' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
-                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
-                      <div class="text-3xl mb-2">📸</div>
-                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Realista</div>
-                    </button>
-                    
-                    <button
-                      @click="geradorEstampas.wizard.style = 'ilustracao'; geradorEstampas.wizardStep = 2"
-                      :class="geradorEstampas.wizard.style === 'ilustracao' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
-                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
-                      <div class="text-3xl mb-2">🖌️</div>
-                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Ilustração</div>
-                    </button>
-                    
-                    <button
-                      @click="geradorEstampas.wizard.style = 'vintage'; geradorEstampas.wizardStep = 2"
-                      :class="geradorEstampas.wizard.style === 'vintage' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
-                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
-                      <div class="text-3xl mb-2">📻</div>
-                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Vintage</div>
-                    </button>
-                    
-                    <button
-                      @click="geradorEstampas.wizard.style = 'abstrato'; geradorEstampas.wizardStep = 2"
-                      :class="geradorEstampas.wizard.style === 'abstrato' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
-                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
-                      <div class="text-3xl mb-2">🌀</div>
-                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Abstrato</div>
-                    </button>
-                    
-                    <button
-                      @click="geradorEstampas.wizard.style = 'aquarela'; geradorEstampas.wizardStep = 2"
-                      :class="geradorEstampas.wizard.style === 'aquarela' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
-                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
-                      <div class="text-3xl mb-2">🎨</div>
-                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Aquarela</div>
-                    </button>
-                    
-                    <button
-                      @click="geradorEstampas.wizard.style = 'graffiti'; geradorEstampas.wizardStep = 2"
-                      :class="geradorEstampas.wizard.style === 'graffiti' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
-                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
-                      <div class="text-3xl mb-2">🎭</div>
-                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Graffiti</div>
-                    </button>
-                    
-                    <button
-                      @click="geradorEstampas.wizard.style = 'pixel'; geradorEstampas.wizardStep = 2"
-                      :class="geradorEstampas.wizard.style === 'pixel' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
-                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
-                      <div class="text-3xl mb-2">🎮</div>
-                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Pixel Art</div>
-                    </button>
+                  </div>
+
+                  <!-- Help Text -->
+                  <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 text-center">
+                    <p class="text-sm text-blue-800 dark:text-blue-200">
+                      💡 <strong>Dica:</strong> Escolha o estilo que mais combina com a mensagem que você quer transmitir
+                    </p>
                   </div>
                 </div>
                 
-                <!-- STEP 2: Escolha do Tema Patriótico -->
-                <div 
-                  x-show="geradorEstampas.wizard.style && geradorEstampas.wizardStep >= 2"
-                  x-transition
-                  class="guide-step-container">
+                <!-- Step 2: Choose Patriotic Theme -->
+                <div x-show="geradorEstampas.wizardMode && geradorEstampas.wizardStep === 2" 
+                     x-transition
+                     class="space-y-6">
                   
-                  <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-4">
-                    🇧🇷 Passo 2: Escolha o Tema Patriótico
-                  </h3>
-                  
-                  <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    <button
-                      @click="geradorEstampas.wizard.theme = 'bandeira'; geradorEstampas.wizardStep = 3"
-                      :class="geradorEstampas.wizard.theme === 'bandeira' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
-                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
-                      <div class="text-3xl mb-2">🇧🇷</div>
-                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Bandeira</div>
-                    </button>
-                    
-                    <button
-                      @click="geradorEstampas.wizard.theme = 'aguia'; geradorEstampas.wizardStep = 3"
-                      :class="geradorEstampas.wizard.theme === 'aguia' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
-                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
-                      <div class="text-3xl mb-2">🦅</div>
-                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Águia</div>
-                    </button>
-                    
-                    <button
-                      @click="geradorEstampas.wizard.theme = 'cristo'; geradorEstampas.wizardStep = 3"
-                      :class="geradorEstampas.wizard.theme === 'cristo' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
-                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
-                      <div class="text-3xl mb-2">🗿</div>
-                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Cristo Redentor</div>
-                    </button>
-                    
-                    <button
-                      @click="geradorEstampas.wizard.theme = 'amazonia'; geradorEstampas.wizardStep = 3"
-                      :class="geradorEstampas.wizard.theme === 'amazonia' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
-                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
-                      <div class="text-3xl mb-2">🌴</div>
-                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Amazônia</div>
-                    </button>
-                    
-                    <button
-                      @click="geradorEstampas.wizard.theme = 'ordem'; geradorEstampas.wizardStep = 3"
-                      :class="geradorEstampas.wizard.theme === 'ordem' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
-                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
-                      <div class="text-3xl mb-2">⚡</div>
-                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Ordem e Progresso</div>
-                    </button>
-                    
-                    <button
-                      @click="geradorEstampas.wizard.theme = 'ipiranga'; geradorEstampas.wizardStep = 3"
-                      :class="geradorEstampas.wizard.theme === 'ipiranga' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
-                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
-                      <div class="text-3xl mb-2">🗡️</div>
-                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Grito do Ipiranga</div>
-                    </button>
-                    
-                    <button
-                      @click="geradorEstampas.wizard.theme = 'onca'; geradorEstampas.wizardStep = 3"
-                      :class="geradorEstampas.wizard.theme === 'onca' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
-                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
-                      <div class="text-3xl mb-2">🐆</div>
-                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Onça Pintada</div>
-                    </button>
-                    
-                    <button
-                      @click="geradorEstampas.wizard.theme = 'futebol'; geradorEstampas.wizardStep = 3"
-                      :class="geradorEstampas.wizard.theme === 'futebol' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
-                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
-                      <div class="text-3xl mb-2">⚽</div>
-                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Futebol</div>
-                    </button>
-                  </div>
-                </div>
-                
-                <!-- STEP 3: Detalhes e Preview do Prompt -->
-                <div 
-                  x-show="geradorEstampas.wizard.style && geradorEstampas.wizard.theme && geradorEstampas.wizardStep >= 3"
-                  x-transition
-                  class="guide-step-container">
-                  
-                  <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-4">
-                    ✨ Passo 3: Detalhes e Preview
-                  </h3>
-                  
-                  <!-- Cores -->
-                  <div class="mb-4">
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      🎨 Escolha as Cores:
-                    </label>
-                    <div class="grid grid-cols-2 md:grid-cols-5 gap-2">
-                      <button
-                        @click="geradorEstampas.wizard.colors = 'verde_amarelo'"
-                        :class="geradorEstampas.wizard.colors === 'verde_amarelo' ? 'ring-2 ring-green-500' : ''"
-                        class="p-2 rounded-lg bg-gradient-to-r from-green-600 to-yellow-400 text-white text-xs font-semibold">
-                        Verde + Amarelo
-                      </button>
-                      <button
-                        @click="geradorEstampas.wizard.colors = 'verde'"
-                        :class="geradorEstampas.wizard.colors === 'verde' ? 'ring-2 ring-green-500' : ''"
-                        class="p-2 rounded-lg bg-green-600 text-white text-xs font-semibold">
-                        Verde
-                      </button>
-                      <button
-                        @click="geradorEstampas.wizard.colors = 'amarelo'"
-                        :class="geradorEstampas.wizard.colors === 'amarelo' ? 'ring-2 ring-green-500' : ''"
-                        class="p-2 rounded-lg bg-yellow-400 text-gray-800 text-xs font-semibold">
-                        Amarelo
-                      </button>
-                      <button
-                        @click="geradorEstampas.wizard.colors = 'azul'"
-                        :class="geradorEstampas.wizard.colors === 'azul' ? 'ring-2 ring-green-500' : ''"
-                        class="p-2 rounded-lg bg-blue-600 text-white text-xs font-semibold">
-                        Azul
-                      </button>
-                      <button
-                        @click="geradorEstampas.wizard.colors = 'vibrante'"
-                        :class="geradorEstampas.wizard.colors === 'vibrante' ? 'ring-2 ring-green-500' : ''"
-                        class="p-2 rounded-lg bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 text-white text-xs font-semibold">
-                        Vibrante
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <!-- Detalhes Customizados -->
-                  <div class="mb-4">
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      ✏️ Detalhes Adicionais (opcional):
-                    </label>
-                    <textarea
-                      x-model="geradorEstampas.wizard.customDetails"
-                      placeholder="Ex: adicione texto 'BRASIL', efeito de brilho, etc..."
-                      class="w-full h-20 p-3 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brasil-green text-gray-900 dark:text-white resize-none"
-                    ></textarea>
-                  </div>
-                  
-                  <!-- Preview do Prompt -->
-                  <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 mb-4">
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      📝 Preview do Prompt Gerado:
-                    </label>
-                    <div class="text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-900 p-3 rounded border border-gray-300 dark:border-gray-600 min-h-[80px]">
-                      <span x-text="buildWizardPrompt()"></span>
-                    </div>
-                  </div>
-                  
-                  <!-- Botão Gerar -->
-                  <button
-                    @click="generateFromWizard()"
-                    :disabled="geradorEstampas.isLoading || !geradorEstampas.wizard.style || !geradorEstampas.wizard.theme"
-                    class="w-full bg-gradient-to-r from-brasil-green to-green-600 hover:from-brasil-greenLight hover:to-green-700 text-white font-bold py-4 px-8 rounded-xl text-lg transition-all transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <svg x-show="!geradorEstampas.isLoading" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                  <!-- Back Button -->
+                  <button @click="geradorEstampas.wizardStep = 1" 
+                          type="button"
+                          class="mb-4 text-brasil-green hover:text-green-700 dark:hover:text-green-300 font-semibold flex items-center gap-2 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                     </svg>
-                    <svg x-show="geradorEstampas.isLoading" class="animate-spin h-6 w-6" viewBox="0 0 24 24">
-                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
-                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span x-text="geradorEstampas.isLoading ? 'Gerando sua obra-prima...' : '✨ GERAR ESTAMPA AGORA'"></span>
+                    Voltar para Estilo
                   </button>
+
+                  <div class="text-center mb-6">
+                    <h3 class="text-2xl font-bold text-gray-800 dark:text-white mb-2">
+                      🇧🇷 Qual tema patriótico você quer?
+                    </h3>
+                    <p class="text-gray-600 dark:text-gray-400">
+                      Escolha um tema brasileiro para sua estampa
+                    </p>
+                  </div>
+
+                  <!-- Theme Cards Grid -->
+                  <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <template x-for="theme in [
+                      { id: 'bandeira', name: 'Bandeira do Brasil', emoji: '🇧🇷', desc: 'Cores e símbolo nacional' },
+                      { id: 'aguia', name: 'Águia Brasileira', emoji: '🦅', desc: 'Força e liberdade' },
+                      { id: 'cristo', name: 'Cristo Redentor', emoji: '⛪', desc: 'Ícone do Rio' },
+                      { id: 'amazonia', name: 'Amazônia', emoji: '🌳', desc: 'Floresta tropical' },
+                      { id: 'ordem', name: 'Ordem e Progresso', emoji: '⭐', desc: 'Lema da bandeira' },
+                      { id: 'ipiranga', name: 'Grito do Ipiranga', emoji: '🗡️', desc: 'Independência' },
+                      { id: 'verde_amarelo', name: 'Verde e Amarelo', emoji: '💚💛', desc: 'Cores nacionais' },
+                      { id: 'onca', name: 'Onça Pintada', emoji: '🐆', desc: 'Animal brasileiro' },
+                      { id: 'futebol', name: 'Futebol Brasileiro', emoji: '⚽', desc: 'Paixão nacional' }
+                    ]" :key="theme.id">
+                      <button @click="geradorEstampas.wizard.theme = theme.id"
+                              type="button"
+                              class="group relative p-5 rounded-2xl border-3 transition-all duration-300 text-center hover:scale-105 hover:shadow-xl"
+                              :class="geradorEstampas.wizard.theme === theme.id 
+                                ? 'border-brasil-green bg-gradient-to-br from-green-50 to-yellow-50 dark:from-green-900/30 dark:to-yellow-900/30 shadow-lg scale-105' 
+                                : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-brasil-green'">
+                        
+                        <!-- Selected Checkmark -->
+                        <div x-show="geradorEstampas.wizard.theme === theme.id"
+                             class="absolute -top-2 -right-2 bg-brasil-green text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg">
+                          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                          </svg>
+                        </div>
+
+                        <!-- Theme Content -->
+                        <div class="text-5xl mb-3 transition-transform group-hover:scale-110" 
+                             x-text="theme.emoji"></div>
+                        <p class="font-bold text-sm text-gray-800 dark:text-white mb-1" 
+                           x-text="theme.name"></p>
+                        <p class="text-xs text-gray-600 dark:text-gray-400" 
+                           x-text="theme.desc"></p>
+                      </button>
+                    </template>
+                  </div>
+
+                  <!-- Next Button -->
+                  <div class="pt-4">
+                    <button @click="geradorEstampas.wizardStep = 3" 
+                            type="button"
+                            :disabled="!geradorEstampas.wizard.theme"
+                            class="w-full bg-brasil-yellow hover:bg-yellow-500 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50 text-brasil-dark font-bold py-5 px-6 rounded-xl transition-all transform hover:scale-105 shadow-lg disabled:transform-none disabled:shadow-none flex items-center justify-center gap-3 text-lg">
+                      <span x-show="!geradorEstampas.wizard.theme">
+                        ⬆️ Escolha um tema para continuar
+                      </span>
+                      <span x-show="geradorEstampas.wizard.theme">
+                        Próximo: Personalizar Detalhes →
+                      </span>
+                    </button>
+                  </div>
+
+                  <!-- Selected Summary -->
+                  <div x-show="geradorEstampas.wizard.style && geradorEstampas.wizard.theme"
+                       class="bg-gradient-to-r from-green-50 to-yellow-50 dark:from-green-900/20 dark:to-yellow-900/20 rounded-xl p-4 border-2 border-brasil-green">
+                    <p class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
+                      ✨ Sua combinação até agora:
+                    </p>
+                    <p class="text-sm text-gray-600 dark:text-gray-300">
+                      Estilo <strong x-text="geradorEstampas.wizard.style"></strong> + 
+                      Tema <strong x-text="geradorEstampas.wizard.theme"></strong>
+                    </p>
+                  </div>
+                </div>
+                
+                <!-- Step 3: Customize Details + AI Preview -->
+                <div x-show="geradorEstampas.wizardMode && geradorEstampas.wizardStep === 3" 
+                     x-transition
+                     class="space-y-6">
+                  
+                  <!-- Back Button -->
+                  <button @click="geradorEstampas.wizardStep = 2" 
+                          type="button"
+                          class="mb-4 text-brasil-green hover:text-green-700 dark:hover:text-green-300 font-semibold flex items-center gap-2 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                    Voltar para Tema
+                  </button>
+
+                  <div class="text-center mb-6">
+                    <h3 class="text-2xl font-bold text-gray-800 dark:text-white mb-2">
+                      ✨ Personalize os detalhes (opcional)
+                    </h3>
+                    <p class="text-gray-600 dark:text-gray-400">
+                      Ajuste cores e adicione detalhes específicos
+                    </p>
+                  </div>
+
+                  <!-- Color Preference -->
+                  <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border-2 border-gray-200 dark:border-gray-700">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">
+                      🎨 Cores predominantes:
+                    </label>
+                    <div class="flex gap-3 flex-wrap">
+                      <template x-for="color in [
+                        { id: 'verde_amarelo', name: 'Verde e Amarelo', class: 'bg-gradient-to-r from-green-600 to-yellow-400' },
+                        { id: 'verde', name: 'Só Verde', class: 'bg-green-600' },
+                        { id: 'amarelo', name: 'Só Amarelo', class: 'bg-yellow-400' },
+                        { id: 'azul', name: 'Azul', class: 'bg-blue-600' },
+                        { id: 'vibrante', name: 'Cores Vibrantes', class: 'bg-gradient-to-r from-red-500 via-yellow-500 to-green-500' }
+                      ]" :key="color.id">
+                        <button @click="geradorEstampas.wizard.colors = color.id"
+                                type="button"
+                                class="px-5 py-3 rounded-xl font-semibold transition-all text-white shadow-md"
+                                :class="[
+                                  color.class,
+                                  geradorEstampas.wizard.colors === color.id 
+                                    ? 'ring-4 ring-brasil-green ring-offset-2 scale-110 shadow-xl' 
+                                    : 'opacity-70 hover:opacity-100 hover:scale-105'
+                                ]">
+                          <span class="text-sm drop-shadow" x-text="color.name"></span>
+                        </button>
+                      </template>
+                    </div>
+                  </div>
+
+                  <!-- Additional Custom Details -->
+                  <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border-2 border-gray-200 dark:border-gray-700">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                      📝 Quer adicionar algo específico? (opcional)
+                    </label>
+                    <input type="text" 
+                           x-model="geradorEstampas.wizard.customDetails"
+                           placeholder="Ex: adicione uma frase motivacional, inclua o nome 'Brasil Campeão'"
+                           maxlength="100"
+                           class="w-full px-4 py-3 rounded-xl border-2 border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white focus:border-brasil-green focus:ring-2 focus:ring-brasil-green/20 outline-none transition-all">
+                    <p class="text-xs text-gray-500 mt-2">
+                      <span x-text="(geradorEstampas.wizard.customDetails || '').length"></span>/100 caracteres
+                    </p>
+                  </div>
+
+                  <!-- AI Prompt Preview Box -->
+                  <div class="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl p-6 border-3 border-blue-300 dark:border-blue-700 shadow-xl">
+                    <div class="flex items-start gap-4">
+                      <div class="flex-shrink-0 w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                        <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                      </div>
+                      <div class="flex-1">
+                        <p class="font-bold text-blue-900 dark:text-blue-200 mb-3 text-lg">
+                          🤖 Prompt que será enviado para a IA:
+                        </p>
+                        <div class="bg-white/80 dark:bg-gray-900/80 rounded-xl p-4 border-2 border-blue-200 dark:border-blue-800">
+                          <p class="text-sm text-blue-900 dark:text-blue-100 italic leading-relaxed font-mono"
+                             x-text="buildWizardPrompt()"></p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Generate Button -->
+                  <div class="pt-4">
+                    <button @click="generateFromWizard()" 
+                            type="button"
+                            class="w-full bg-gradient-to-r from-brasil-green to-green-600 hover:from-brasil-greenLight hover:to-green-700 text-white font-bold py-6 px-6 rounded-2xl transition-all transform hover:scale-105 shadow-2xl text-xl flex items-center justify-center gap-3">
+                      <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                      </svg>
+                      <span>✨ GERAR ESTAMPA COM IA</span>
+                    </button>
+                  </div>
+
+                  <!-- Info Note -->
+                  <div class="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 border-2 border-green-200 dark:border-green-700 text-center">
+                    <p class="text-sm text-green-800 dark:text-green-200">
+                      ✓ Sua estampa será gerada em <strong>30 segundos</strong> com tecnologia de IA avançada
+                    </p>
+                  </div>
                 </div>
               </div>
 
@@ -3782,7 +3960,7 @@
             Coleção <span class="text-brasil-green dark:text-brasil-yellow">Exclusiva</span>
           </h2>
           <p class="text-gray-600 dark:text-gray-400">
-            Deslize para ver mais modelos com identidade nacional
+            Deslize para ver mais modelos com estampas patrióticas
           </p>
         </div>
         
@@ -3940,7 +4118,7 @@
                 <div class="w-10 h-10 bg-brasil-green rounded-full flex items-center justify-center mr-4">
                   <i class="fas fa-check text-white"></i>
                 </div>
-                <span class="text-gray-700 dark:text-gray-300">Estampas Exclusivas com Identidade Nacional</span>
+                <span class="text-gray-700 dark:text-gray-300">Estampas Patrióticas</span>
               </div>
             </div>
             
@@ -4647,14 +4825,15 @@
         </p>
       </div>
 
-      <form @submit.prevent="login()" class="space-y-4">
+      <form @submit.prevent="geradorEstampas.loginForm.isRegister ? register() : login()" class="space-y-4">
         <div x-show="geradorEstampas.loginForm.isRegister">
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome completo</label>
           <input 
             type="text" 
             x-model="geradorEstampas.loginForm.nome"
             required
-            class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-brasil-green focus:ring-0 dark:bg-gray-700 dark:text-white"
+            :disabled="geradorEstampas.loginForm.isLoading"
+            class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-brasil-green focus:ring-0 dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
             placeholder="Seu nome"
           >
         </div>
@@ -4665,7 +4844,8 @@
             type="email" 
             x-model="geradorEstampas.loginForm.email"
             required
-            class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-brasil-green focus:ring-0 dark:bg-gray-700 dark:text-white"
+            :disabled="geradorEstampas.loginForm.isLoading"
+            class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-brasil-green focus:ring-0 dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
             placeholder="seu@email.com"
           >
         </div>
@@ -4677,7 +4857,8 @@
             x-model="geradorEstampas.loginForm.password"
             required
             minlength="6"
-            class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-brasil-green focus:ring-0 dark:bg-gray-700 dark:text-white"
+            :disabled="geradorEstampas.loginForm.isLoading"
+            class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-brasil-green focus:ring-0 dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
             placeholder="Mínimo 6 caracteres"
           >
         </div>
@@ -4687,17 +4868,27 @@
           <input 
             type="tel" 
             x-model="geradorEstampas.loginForm.telefone"
-            class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-brasil-green focus:ring-0 dark:bg-gray-700 dark:text-white"
+            :disabled="geradorEstampas.loginForm.isLoading"
+            class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-lg focus:border-brasil-green focus:ring-0 dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
             placeholder="(11) 99999-9999"
           >
         </div>
 
         <button 
           type="submit"
-          class="w-full py-4 bg-brasil-green text-white font-bold rounded-lg hover:bg-brasil-green-dark transition-all"
+          :disabled="geradorEstampas.loginForm.isLoading"
+          class="w-full py-4 bg-brasil-green text-white font-bold rounded-lg hover:bg-brasil-green-dark transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
-          <span x-show="!geradorEstampas.loginForm.isRegister">Entrar</span>
-          <span x-show="geradorEstampas.loginForm.isRegister">Cadastrar</span>
+          <span x-show="!geradorEstampas.loginForm.isLoading && !geradorEstampas.loginForm.isRegister">Entrar</span>
+          <span x-show="!geradorEstampas.loginForm.isLoading && geradorEstampas.loginForm.isRegister">Cadastrar</span>
+          <span x-show="geradorEstampas.loginForm.isLoading" class="flex items-center gap-2">
+            <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span x-show="!geradorEstampas.loginForm.isRegister">Entrando...</span>
+            <span x-show="geradorEstampas.loginForm.isRegister">Criando conta...</span>
+          </span>
         </button>
       </form>
 
