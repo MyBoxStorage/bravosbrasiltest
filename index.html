@@ -10,7 +10,7 @@
   
   <!-- Primary SEO -->
   <title>BRAVOS BRASIL | Camisetas Premium Patrióticas - Vista Seu Orgulho</title>
-  <meta name="description" content="Camisetas premium com designs exclusivos com identidade nacional. 100% algodão brasileiro, estampas de alta qualidade. Deus, Família, Pátria. Frete grátis para todo o Brasil.">
+  <meta name="description" content="Camisetas premium com estampas exclusivas com identidade nacional. 100% algodão brasileiro, estampas de alta qualidade. Deus, Família, Pátria. Frete grátis para todo o Brasil.">
   <meta name="keywords" content="camisetas patrióticas, camisetas Brasil, moda conservadora, camisetas verde e amarelo, orgulho brasileiro">
   <meta name="author" content="BRAVOS BRASIL">
   <meta name="robots" content="index, follow">
@@ -20,7 +20,7 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://bravosbrasil.com.br">
   <meta property="og:title" content="BRAVOS BRASIL | Camisetas Premium Patrióticas">
-  <meta property="og:description" content="Vista seu orgulho brasileiro com camisetas premium de alta qualidade. Designs exclusivos com identidade nacional.">
+  <meta property="og:description" content="Vista seu orgulho brasileiro com camisetas premium de alta qualidade. Estampas exclusivas com identidade nacional.">
   <meta property="og:image" content="https://bravosbrasil.com.br/og-image.jpg">
   
   <!-- Twitter -->
@@ -193,7 +193,7 @@
           generatedImageUrl: null,
           isLoading: false,
           error: null,
-          tentativasRestantes: 0,
+          tentativasRestantes: 10, // Default to 10 for non-authenticated users
           estampaId: null,
           openLoginModal: false,
           isPreview: false,
@@ -904,6 +904,10 @@
                 const data = await response.json();
                 this.auth.user = data.user;
                 this.auth.isAuthenticated = true;
+                // Update attempts counter
+                if (this.auth.user && this.auth.user.tentativas_restantes !== undefined) {
+                  this.geradorEstampas.tentativasRestantes = this.auth.user.tentativas_restantes;
+                }
                 await this.checkTentativas();
                 // Recarregar cache após autenticação
                 this.loadStampCache();
@@ -1558,7 +1562,7 @@
             vibrante: 'cores vibrantes e saturadas'
           };
           
-          let prompt = `Crie uma estampa com identidade nacional brasileira profissional para camiseta: `;
+          let prompt = `Crie uma estampa patriótica brasileira profissional para camiseta: `;
           prompt += `${themeMap[wizard.theme]}, `;
           prompt += `${styleMap[wizard.style]}, `;
           prompt += `${colorMap[wizard.colors]}, `;
@@ -2624,7 +2628,7 @@
           data-aos-delay="200"
           class="text-xl md:text-2xl text-white/90 mb-10 max-w-2xl mx-auto"
         >
-          Camisetas premium com designs exclusivos com identidade nacional. 
+          Camisetas premium com estampas exclusivas com identidade nacional. 
           Qualidade incomparável para quem ama o Brasil.
         </p>
         
@@ -2699,8 +2703,8 @@
             🎨 Transforme Suas Ideias em <span class="text-brasil-green dark:text-brasil-yellow">Estampas Únicas</span>
           </h2>
           <p class="text-base md:text-lg text-gray-600 dark:text-gray-300 mb-6 max-w-3xl mx-auto">
-            Nossa inteligência artificial cria designs exclusivos com identidade nacional profissionais em <strong>30 segundos</strong>. 
-            Sem habilidades de design necessárias. <strong class="text-brasil-green">10 designs exclusivos</strong> para começar!
+            Nossa inteligência artificial cria estampas patrióticas profissionais em <strong>30 segundos</strong>. 
+            Sem habilidades de design necessárias. <strong class="text-brasil-green">10 estampas grátis</strong> para começar!
           </p>
         </div>
 
@@ -3177,131 +3181,243 @@
                 </p>
               </div>
 
-              <!-- MODO GUIADO - ESTRUTURA COMPLETA -->
+              <!-- MODO GUIADO - ESTRUTURA 3 PASSOS PATRIÓTICA -->
               <div x-show="!geradorEstampas.advancedMode" x-transition class="space-y-6">
                 
-                <!-- STEP 1: Escolha de Persona -->
+                <!-- STEP 1: Escolha do Estilo -->
                 <div class="guide-step-container">
                   <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-4">
-                    👥 Passo 1: Quem vai aparecer na sua estampa?
+                    🎨 Passo 1: Escolha o Estilo
                   </h3>
                   
                   <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <!-- Opção Família -->
-                    <div class="guide-step-container">
-                      <button
-                        @click="selectPersona('familia')"
-                        :class="geradorEstampas.guideState.selectedPersona === 'familia' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
-                        class="relative w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
-                        <div class="text-4xl mb-2">👨‍👩‍👧‍👦</div>
-                        <div class="font-semibold text-sm text-gray-800 dark:text-white">Família</div>
-                      </button>
-                      
-                      <!-- Speech Bubble Guia -->
-                      <div 
-                        x-show="!geradorEstampas.guideState.selectedPersona && geradorEstampas.guideState.currentStep === null"
-                        class="guide-bubble-top show pulse">
-                        <div class="text-center">
-                          <span class="text-2xl block mb-2">👋</span>
-                          <strong>Comece escolhendo!</strong>
-                          <p class="text-sm mt-2 opacity-90">Clique em uma opção para ver sugestões de prompts incríveis</p>
-                        </div>
-                      </div>
-                    </div>
+                    <button
+                      @click="geradorEstampas.wizard.style = 'minimalista'; geradorEstampas.wizardStep = 2"
+                      :class="geradorEstampas.wizard.style === 'minimalista' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
+                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
+                      <div class="text-3xl mb-2">✨</div>
+                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Minimalista</div>
+                    </button>
                     
-                    <!-- Opção Sozinho -->
-                    <div class="guide-step-container">
-                      <button
-                        @click="selectPersona('sozinho')"
-                        :class="geradorEstampas.guideState.selectedPersona === 'sozinho' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
-                        class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
-                        <div class="text-4xl mb-2">🧍</div>
-                        <div class="font-semibold text-sm text-gray-800 dark:text-white">Sozinho(a)</div>
-                      </button>
-                    </div>
+                    <button
+                      @click="geradorEstampas.wizard.style = 'realista'; geradorEstampas.wizardStep = 2"
+                      :class="geradorEstampas.wizard.style === 'realista' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
+                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
+                      <div class="text-3xl mb-2">📸</div>
+                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Realista</div>
+                    </button>
                     
-                    <!-- Opção Casal -->
-                    <div class="guide-step-container">
-                      <button
-                        @click="selectPersona('casal')"
-                        :class="geradorEstampas.guideState.selectedPersona === 'casal' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
-                        class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
-                        <div class="text-4xl mb-2">💑</div>
-                        <div class="font-semibold text-sm text-gray-800 dark:text-white">Casal</div>
-                      </button>
-                    </div>
+                    <button
+                      @click="geradorEstampas.wizard.style = 'ilustracao'; geradorEstampas.wizardStep = 2"
+                      :class="geradorEstampas.wizard.style === 'ilustracao' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
+                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
+                      <div class="text-3xl mb-2">🖌️</div>
+                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Ilustração</div>
+                    </button>
                     
-                    <!-- Opção Pet -->
-                    <div class="guide-step-container">
-                      <button
-                        @click="selectPersona('pet')"
-                        :class="geradorEstampas.guideState.selectedPersona === 'pet' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
-                        class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
-                        <div class="text-4xl mb-2">🐕</div>
-                        <div class="font-semibold text-sm text-gray-800 dark:text-white">Pet</div>
-                      </button>
-                    </div>
+                    <button
+                      @click="geradorEstampas.wizard.style = 'vintage'; geradorEstampas.wizardStep = 2"
+                      :class="geradorEstampas.wizard.style === 'vintage' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
+                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
+                      <div class="text-3xl mb-2">📻</div>
+                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Vintage</div>
+                    </button>
+                    
+                    <button
+                      @click="geradorEstampas.wizard.style = 'abstrato'; geradorEstampas.wizardStep = 2"
+                      :class="geradorEstampas.wizard.style === 'abstrato' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
+                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
+                      <div class="text-3xl mb-2">🌀</div>
+                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Abstrato</div>
+                    </button>
+                    
+                    <button
+                      @click="geradorEstampas.wizard.style = 'aquarela'; geradorEstampas.wizardStep = 2"
+                      :class="geradorEstampas.wizard.style === 'aquarela' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
+                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
+                      <div class="text-3xl mb-2">🎨</div>
+                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Aquarela</div>
+                    </button>
+                    
+                    <button
+                      @click="geradorEstampas.wizard.style = 'graffiti'; geradorEstampas.wizardStep = 2"
+                      :class="geradorEstampas.wizard.style === 'graffiti' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
+                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
+                      <div class="text-3xl mb-2">🎭</div>
+                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Graffiti</div>
+                    </button>
+                    
+                    <button
+                      @click="geradorEstampas.wizard.style = 'pixel'; geradorEstampas.wizardStep = 2"
+                      :class="geradorEstampas.wizard.style === 'pixel' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
+                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
+                      <div class="text-3xl mb-2">🎮</div>
+                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Pixel Art</div>
+                    </button>
                   </div>
                 </div>
                 
-                <!-- STEP 2: Sugestão de Prompt -->
+                <!-- STEP 2: Escolha do Tema Patriótico -->
                 <div 
-                  x-show="geradorEstampas.guideState.selectedPersona && geradorEstampas.guideState.currentStep === 'prompt-suggestion'"
+                  x-show="geradorEstampas.wizard.style && geradorEstampas.wizardStep >= 2"
                   x-transition
                   class="guide-step-container">
                   
                   <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-4">
-                    ✨ Passo 2: Sugestão de Prompt
+                    🇧🇷 Passo 2: Escolha o Tema Patriótico
                   </h3>
                   
-                  <div class="bg-white dark:bg-gray-700 p-6 rounded-lg border-2 border-gray-200 dark:border-gray-600 relative">
-                    <!-- Speech Bubble com Sugestão -->
-                    <div class="guide-bubble-top prompt-suggestion-bubble show">
-                      <div class="text-center">
-                        <span class="text-2xl block mb-2">🎨</span>
-                        <strong class="text-base">Que tal este prompt?</strong>
-                      </div>
-                      
-                      <div class="prompt-text" x-text="geradorEstampas.promptDatabase[geradorEstampas.guideState.selectedPersona]?.[geradorEstampas.guideState.currentPromptIndex] || ''"></div>
-                      
-                      <div class="bubble-actions">
-                        <button 
-                          @click="usePromptSuggestion()"
-                          class="bubble-btn bubble-btn-primary">
-                          ✅ Usar Este
-                        </button>
-                        <button 
-                          @click="refreshPrompt()"
-                          class="bubble-btn bubble-btn-secondary">
-                          🔄 Outro
-                        </button>
-                      </div>
-                      
-                      <p class="text-xs text-center mt-3 opacity-75">
-                        💡 Dica: Você pode editar o prompt depois de aplicar
-                      </p>
-                    </div>
+                  <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <button
+                      @click="geradorEstampas.wizard.theme = 'bandeira'; geradorEstampas.wizardStep = 3"
+                      :class="geradorEstampas.wizard.theme === 'bandeira' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
+                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
+                      <div class="text-3xl mb-2">🇧🇷</div>
+                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Bandeira</div>
+                    </button>
                     
-                    <div class="text-center py-8 text-gray-400">
-                      <p class="text-sm">Escolha uma opção acima ☝️</p>
-                    </div>
+                    <button
+                      @click="geradorEstampas.wizard.theme = 'aguia'; geradorEstampas.wizardStep = 3"
+                      :class="geradorEstampas.wizard.theme === 'aguia' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
+                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
+                      <div class="text-3xl mb-2">🦅</div>
+                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Águia</div>
+                    </button>
+                    
+                    <button
+                      @click="geradorEstampas.wizard.theme = 'cristo'; geradorEstampas.wizardStep = 3"
+                      :class="geradorEstampas.wizard.theme === 'cristo' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
+                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
+                      <div class="text-3xl mb-2">🗿</div>
+                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Cristo Redentor</div>
+                    </button>
+                    
+                    <button
+                      @click="geradorEstampas.wizard.theme = 'amazonia'; geradorEstampas.wizardStep = 3"
+                      :class="geradorEstampas.wizard.theme === 'amazonia' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
+                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
+                      <div class="text-3xl mb-2">🌴</div>
+                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Amazônia</div>
+                    </button>
+                    
+                    <button
+                      @click="geradorEstampas.wizard.theme = 'ordem'; geradorEstampas.wizardStep = 3"
+                      :class="geradorEstampas.wizard.theme === 'ordem' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
+                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
+                      <div class="text-3xl mb-2">⚡</div>
+                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Ordem e Progresso</div>
+                    </button>
+                    
+                    <button
+                      @click="geradorEstampas.wizard.theme = 'ipiranga'; geradorEstampas.wizardStep = 3"
+                      :class="geradorEstampas.wizard.theme === 'ipiranga' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
+                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
+                      <div class="text-3xl mb-2">🗡️</div>
+                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Grito do Ipiranga</div>
+                    </button>
+                    
+                    <button
+                      @click="geradorEstampas.wizard.theme = 'onca'; geradorEstampas.wizardStep = 3"
+                      :class="geradorEstampas.wizard.theme === 'onca' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
+                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
+                      <div class="text-3xl mb-2">🐆</div>
+                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Onça Pintada</div>
+                    </button>
+                    
+                    <button
+                      @click="geradorEstampas.wizard.theme = 'futebol'; geradorEstampas.wizardStep = 3"
+                      :class="geradorEstampas.wizard.theme === 'futebol' ? 'ring-4 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'"
+                      class="w-full p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all transform hover:scale-105">
+                      <div class="text-3xl mb-2">⚽</div>
+                      <div class="font-semibold text-sm text-gray-800 dark:text-white">Futebol</div>
+                    </button>
                   </div>
                 </div>
                 
-                <!-- STEP 3: Confirmar Prompt Aplicado -->
+                <!-- STEP 3: Detalhes e Preview do Prompt -->
                 <div 
-                  x-show="geradorEstampas.guideState.currentStep === 'prompt-applied'"
+                  x-show="geradorEstampas.wizard.style && geradorEstampas.wizard.theme && geradorEstampas.wizardStep >= 3"
                   x-transition
-                  class="bg-green-50 dark:bg-green-900/20 border-2 border-green-500 dark:border-green-400 rounded-lg p-6 text-center">
-                  <span class="text-4xl block mb-3">🎉</span>
-                  <h3 class="text-xl font-bold text-green-800 dark:text-green-200 mb-2">Prompt Aplicado!</h3>
-                  <p class="text-gray-700 dark:text-gray-300 mb-4">
-                    Seu prompt foi inserido no campo abaixo. Você pode editá-lo ou prosseguir para gerar sua estampa!
-                  </p>
+                  class="guide-step-container">
+                  
+                  <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-4">
+                    ✨ Passo 3: Detalhes e Preview
+                  </h3>
+                  
+                  <!-- Cores -->
+                  <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      🎨 Escolha as Cores:
+                    </label>
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-2">
+                      <button
+                        @click="geradorEstampas.wizard.colors = 'verde_amarelo'"
+                        :class="geradorEstampas.wizard.colors === 'verde_amarelo' ? 'ring-2 ring-green-500' : ''"
+                        class="p-2 rounded-lg bg-gradient-to-r from-green-600 to-yellow-400 text-white text-xs font-semibold">
+                        Verde + Amarelo
+                      </button>
+                      <button
+                        @click="geradorEstampas.wizard.colors = 'verde'"
+                        :class="geradorEstampas.wizard.colors === 'verde' ? 'ring-2 ring-green-500' : ''"
+                        class="p-2 rounded-lg bg-green-600 text-white text-xs font-semibold">
+                        Verde
+                      </button>
+                      <button
+                        @click="geradorEstampas.wizard.colors = 'amarelo'"
+                        :class="geradorEstampas.wizard.colors === 'amarelo' ? 'ring-2 ring-green-500' : ''"
+                        class="p-2 rounded-lg bg-yellow-400 text-gray-800 text-xs font-semibold">
+                        Amarelo
+                      </button>
+                      <button
+                        @click="geradorEstampas.wizard.colors = 'azul'"
+                        :class="geradorEstampas.wizard.colors === 'azul' ? 'ring-2 ring-green-500' : ''"
+                        class="p-2 rounded-lg bg-blue-600 text-white text-xs font-semibold">
+                        Azul
+                      </button>
+                      <button
+                        @click="geradorEstampas.wizard.colors = 'vibrante'"
+                        :class="geradorEstampas.wizard.colors === 'vibrante' ? 'ring-2 ring-green-500' : ''"
+                        class="p-2 rounded-lg bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 text-white text-xs font-semibold">
+                        Vibrante
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <!-- Detalhes Customizados -->
+                  <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      ✏️ Detalhes Adicionais (opcional):
+                    </label>
+                    <textarea
+                      x-model="geradorEstampas.wizard.customDetails"
+                      placeholder="Ex: adicione texto 'BRASIL', efeito de brilho, etc..."
+                      class="w-full h-20 p-3 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-brasil-green text-gray-900 dark:text-white resize-none"
+                    ></textarea>
+                  </div>
+                  
+                  <!-- Preview do Prompt -->
+                  <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      📝 Preview do Prompt Gerado:
+                    </label>
+                    <div class="text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-900 p-3 rounded border border-gray-300 dark:border-gray-600 min-h-[80px]">
+                      <span x-text="buildWizardPrompt()"></span>
+                    </div>
+                  </div>
+                  
+                  <!-- Botão Gerar -->
                   <button
-                    @click="geradorEstampas.guideState.currentStep = null; geradorEstampas.guideState.selectedPersona = null"
-                    class="bg-green-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-green-700 transition-all">
-                    ✨ Escolher Outro Prompt
+                    @click="generateFromWizard()"
+                    :disabled="geradorEstampas.isLoading || !geradorEstampas.wizard.style || !geradorEstampas.wizard.theme"
+                    class="w-full bg-gradient-to-r from-brasil-green to-green-600 hover:from-brasil-greenLight hover:to-green-700 text-white font-bold py-4 px-8 rounded-xl text-lg transition-all transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg x-show="!geradorEstampas.isLoading" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                    <svg x-show="geradorEstampas.isLoading" class="animate-spin h-6 w-6" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span x-text="geradorEstampas.isLoading ? 'Gerando sua obra-prima...' : '✨ GERAR ESTAMPA AGORA'"></span>
                   </button>
                 </div>
               </div>
@@ -3798,7 +3914,7 @@
                 <div class="w-10 h-10 bg-brasil-green rounded-full flex items-center justify-center mr-4">
                   <i class="fas fa-check text-white"></i>
                 </div>
-                <span class="text-gray-700 dark:text-gray-300">Designs Exclusivos com Identidade Nacional</span>
+                <span class="text-gray-700 dark:text-gray-300">Estampas Exclusivas com Identidade Nacional</span>
               </div>
             </div>
             
