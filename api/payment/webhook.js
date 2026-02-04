@@ -90,36 +90,49 @@ export default async function handler(req, res) {
           });
         }
 
-        // Buscar estampas do usuário que estão no carrinho/compradas
+        // CRITICAL: Upload to Google Drive ONLY happens AFTER payment is approved
+        // During generation (api/stamps/generate.js), stamps are saved with status 'gerada'
+        // When added to cart, status changes to 'no_carrinho'
+        // ONLY after payment approval, we upload to Drive and set status to 'processada'
+        
+        // Buscar estampas do usuário que estão no carrinho (apenas essas foram compradas)
         const estampas = getEstampasByUserId(userId);
         const estampasParaProcessar = estampas.filter(e => 
-          e.status === 'no_carrinho' || e.status === 'gerada'
+          e.status === 'no_carrinho' // Apenas estampas que estavam no carrinho comprado
         );
 
-        // Upload para Google Drive (assíncrono, não bloqueia resposta)
+        // Upload para Google Drive APENAS após pagamento aprovado (assíncrono, não bloqueia resposta)
         if (estampasParaProcessar.length > 0) {
+          console.log(`Processando ${estampasParaProcessar.length} estampa(s) para upload no Google Drive após pagamento aprovado`);
+          
           estampasParaProcessar.forEach(async (estampa) => {
             try {
               if (estampa.imagem_base64) {
+                // Upload para Google Drive - APENAS AQUI, após pagamento confirmado
                 const driveUrl = await uploadToGoogleDrive(
                   estampa.imagem_base64,
                   `estampa_${estampa.id}_${Date.now()}.png`,
                   userId
                 );
                 
-                // Atualizar estampa com URL do Drive
+                // Atualizar estampa com URL do Drive e marcar como processada
                 updateEstampa(estampa.id, {
                   imagem_url: driveUrl,
                   status: 'processada',
                   purchase_id: compra.id
                 });
                 
-                console.log(`Estampa ${estampa.id} enviada para Google Drive: ${driveUrl}`);
+                console.log(`✅ Estampa ${estampa.id} enviada para Google Drive após pagamento: ${driveUrl}`);
+              } else {
+                console.warn(`⚠️ Estampa ${estampa.id} sem imagem_base64, pulando upload`);
               }
             } catch (error) {
-              console.error(`Erro ao fazer upload da estampa ${estampa.id}:`, error);
+              console.error(`❌ Erro ao fazer upload da estampa ${estampa.id} para Google Drive:`, error);
+              // Não falha o webhook se upload falhar - apenas loga o erro
             }
           });
+        } else {
+          console.log('Nenhuma estampa no carrinho para processar após pagamento');
         }
 
         return res.status(200).json({ 

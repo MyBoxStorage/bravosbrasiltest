@@ -4,42 +4,27 @@ import { getUserByEmail, createUser, updateUser } from '../../../lib/database.js
 import { createLead } from '../../../lib/database.js';
 
 export default async function handler(req, res) {
-  console.log('🔵 [GOOGLE CALLBACK] Endpoint chamado - Method:', req.method);
-  console.log('📥 Query params:', req.query);
-
   if (req.method !== 'GET') {
-    return res.status(405).json({ 
-      error: 'Method not allowed',
-      allowedMethods: ['GET']
-    });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { code, error, state } = req.query;
+    const { code, error, error_description } = req.query;
 
-    // Verificar se houve erro do Google
+    // Check if user denied access
     if (error) {
-      console.error('❌ Google OAuth retornou erro:', error);
-      return res.redirect(`/?auth_error=${encodeURIComponent(error)}`);
+      console.log('⚠️ User denied Google OAuth:', error_description);
+      return res.redirect('/?error=google_auth_denied');
     }
 
+    // Validate authorization code
     if (!code) {
-      console.error('❌ Código de autorização não recebido');
-      return res.redirect(`/?auth_error=${encodeURIComponent('Código de autorização não recebido')}`);
+      return res.redirect('/?error=no_auth_code');
     }
 
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${process.env.SITE_URL || 'http://localhost:3000'}/api/auth/google/callback`;
+    console.log('🔐 Received authorization code from Google');
 
-    if (!clientId || !clientSecret) {
-      console.error('❌ Google OAuth não configurado (faltam credenciais)');
-      return res.redirect(`/?auth_error=${encodeURIComponent('Configuração OAuth incompleta')}`);
-    }
-
-    console.log('🔄 Trocando código por token de acesso...');
-
-    // Trocar código por token de acesso
+    // Exchange code for tokens
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: {
@@ -47,95 +32,85 @@ export default async function handler(req, res) {
       },
       body: new URLSearchParams({
         code: code,
-        client_id: clientId,
-        client_secret: clientSecret,
-        redirect_uri: redirectUri,
-        grant_type: 'authorization_code'
-      })
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        redirect_uri: process.env.GOOGLE_REDIRECT_URI || 
+          `${process.env.SITE_URL || 'http://localhost:3000'}/api/auth/google/callback`,
+        grant_type: 'authorization_code',
+      }),
     });
 
     if (!tokenResponse.ok) {
-      const errorData = await tokenResponse.text();
-      console.error('❌ Erro ao trocar código por token:', errorData);
-      return res.redirect(`/?auth_error=${encodeURIComponent('Erro ao autenticar com Google')}`);
+      const errorData = await tokenResponse.json();
+      console.error('❌ Token exchange failed:', errorData);
+      return res.redirect('/?error=token_exchange_failed');
     }
 
-    const tokenData = await tokenResponse.json();
-    const accessToken = tokenData.access_token;
+    const tokens = await tokenResponse.json();
+    console.log('✅ Received access token from Google');
 
-    if (!accessToken) {
-      console.error('❌ Token de acesso não recebido');
-      return res.redirect(`/?auth_error=${encodeURIComponent('Token de acesso não recebido')}`);
-    }
-
-    console.log('✅ Token de acesso recebido');
-
-    // Buscar informações do usuário no Google
+    // Get user info from Google
     const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: {
-        'Authorization': `Bearer ${accessToken}`
-      }
+        Authorization: `Bearer ${tokens.access_token}`,
+      },
     });
 
     if (!userInfoResponse.ok) {
-      console.error('❌ Erro ao buscar informações do usuário');
-      return res.redirect(`/?auth_error=${encodeURIComponent('Erro ao buscar informações do usuário')}`);
+      console.error('❌ Failed to get user info from Google');
+      return res.redirect('/?error=user_info_failed');
     }
 
     const googleUser = await userInfoResponse.json();
-    console.log('👤 Usuário do Google:', googleUser.email);
+    console.log('👤 Google user:', googleUser.email);
 
-    // Verificar se usuário já existe
+    // Check if user exists in database
     let user = getUserByEmail(googleUser.email);
 
     if (!user) {
-      // Criar novo usuário
-      console.log('📝 Criando novo usuário do Google:', googleUser.email);
-      
+      // Create new user
+      console.log('📝 Creating new user from Google account');
       user = createUser({
         nome: googleUser.name || googleUser.given_name || 'Usuário Google',
         email: googleUser.email,
-        senha_hash: null, // Sem senha para login OAuth
+        senha_hash: null, // No password for OAuth users
         telefone: null,
         tentativas_restantes: 10,
         google_id: googleUser.id,
-        avatar_url: googleUser.picture
+        avatar_url: googleUser.picture,
+        auth_provider: 'google'
       });
 
-      // Criar lead
+      // Create lead
       createLead({
         nome: user.nome,
         email: user.email,
         telefone: '',
         origem: 'google_oauth'
       });
-
-      console.log('✅ Usuário criado:', user.id);
     } else {
-      // Atualizar informações do Google se necessário
+      // Update existing user with Google info if not already set
       if (!user.google_id) {
-        user = updateUser(user.id, {
-          google_id: googleUser.id,
-          avatar_url: googleUser.picture
+        console.log('🔄 Linking Google account to existing user');
+        user = updateUser(user.id, { 
+          google_id: googleUser.id, 
+          avatar_url: googleUser.picture,
+          auth_provider: 'google'
         });
       }
-      console.log('✅ Usuário existente encontrado:', user.id);
     }
 
-    // Gerar JWT token
-    const token = generateToken(user.id);
+    // Generate JWT token
+    const jwtToken = generateToken(user.id);
 
-    console.log('✅ Token JWT gerado para:', user.email);
+    console.log('✅ Google OAuth successful, redirecting with token');
 
-    // Redirecionar para frontend com token
-    // O frontend vai pegar o token da URL e salvar no localStorage
-    const frontendUrl = `${process.env.SITE_URL || 'http://localhost:3000'}/?google_auth_success=true&token=${encodeURIComponent(token)}`;
-    
-    return res.redirect(frontendUrl);
+    // Redirect to home page with token in URL
+    // Frontend will extract token and save to localStorage
+    return res.redirect(`/?auth_token=${jwtToken}&auth_method=google`);
 
   } catch (error) {
-    console.error('❌ Erro no callback do Google OAuth:', error);
-    
-    return res.redirect(`/?auth_error=${encodeURIComponent('Erro ao processar autenticação Google')}`);
+    console.error('❌ Google OAuth callback error:', error);
+    return res.redirect('/?error=google_auth_failed');
   }
 }

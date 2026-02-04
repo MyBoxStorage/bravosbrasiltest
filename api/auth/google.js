@@ -1,54 +1,43 @@
 // Google OAuth - Iniciar fluxo de autenticação
 export default async function handler(req, res) {
-  console.log('🔵 [GOOGLE AUTH] Endpoint chamado - Method:', req.method);
-
   if (req.method !== 'GET') {
-    return res.status(405).json({ 
-      error: 'Method not allowed',
-      allowedMethods: ['GET']
-    });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
+    // Get environment variables
     const clientId = process.env.GOOGLE_CLIENT_ID;
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${process.env.SITE_URL || 'http://localhost:3000'}/api/auth/google/callback`;
-    
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI || 
+      `${process.env.SITE_URL || 'http://localhost:3000'}/api/auth/google/callback`;
+
     if (!clientId) {
-      console.error('❌ GOOGLE_CLIENT_ID não configurado');
+      console.error('❌ GOOGLE_CLIENT_ID not configured');
       return res.status(500).json({ 
-        error: 'Google OAuth não configurado. Contate o suporte.'
+        error: 'Google OAuth not configured',
+        message: 'GOOGLE_CLIENT_ID missing in environment variables'
       });
     }
 
-    // Gerar state para segurança (prevenir CSRF)
-    const state = Buffer.from(JSON.stringify({
-      timestamp: Date.now(),
-      random: Math.random().toString(36)
-    })).toString('base64');
+    // Build Google OAuth URL
+    const googleAuthUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+    
+    googleAuthUrl.searchParams.append('client_id', clientId);
+    googleAuthUrl.searchParams.append('redirect_uri', redirectUri);
+    googleAuthUrl.searchParams.append('response_type', 'code');
+    googleAuthUrl.searchParams.append('scope', 'openid email profile');
+    googleAuthUrl.searchParams.append('access_type', 'offline');
+    googleAuthUrl.searchParams.append('prompt', 'consent');
 
-    // Parâmetros OAuth 2.0
-    const params = new URLSearchParams({
-      client_id: clientId,
-      redirect_uri: redirectUri,
-      response_type: 'code',
-      scope: 'openid email profile',
-      access_type: 'offline',
-      prompt: 'consent',
-      state: state
-    });
+    console.log('🔐 Redirecting to Google OAuth');
+    console.log('📍 Redirect URI:', redirectUri);
 
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-
-    console.log('🔗 Redirecionando para Google OAuth:', authUrl.substring(0, 100) + '...');
-
-    // Redirecionar para Google
-    return res.redirect(authUrl);
+    // Redirect user to Google
+    return res.redirect(googleAuthUrl.toString());
 
   } catch (error) {
-    console.error('❌ Erro ao iniciar Google OAuth:', error);
-    
+    console.error('❌ Error initiating Google OAuth:', error);
     return res.status(500).json({ 
-      error: 'Erro ao iniciar autenticação com Google',
+      error: 'Failed to initiate Google authentication',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }

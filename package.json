@@ -10,5 +10,8 @@
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.3",
     "replicate": "^0.34.1"
+  },
+  "devDependencies": {
+    "dotenv": "^17.2.3"
   }
 }
