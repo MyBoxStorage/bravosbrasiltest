@@ -684,6 +684,9 @@
           // Check authentication
           this.checkAuth();
           
+          // Initialize parallax effect for hero flag
+          this.initParallax();
+          
           // Watch tentativasRestantes for notifications
           this.$watch('geradorEstampas.tentativasRestantes', (newValue, oldValue) => {
             if (oldValue !== undefined && newValue < oldValue && newValue > 0) {
@@ -1950,10 +1953,10 @@
     
     /* Parallax Effect */
     .parallax {
-      background-attachment: fixed;
-      background-position: center;
+      background-position: center 0;
       background-repeat: no-repeat;
       background-size: cover;
+      position: relative;
     }
     
     @media (max-width: 768px) {
