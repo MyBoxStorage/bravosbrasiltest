@@ -1,33 +1,72 @@
-import { registerUser, generateToken } from '../../lib/auth.js';
+import { hashPassword, generateToken } from '../../lib/auth.js';
+import { createUser, getUserByEmail } from '../../lib/database.js';
 import { createLead } from '../../lib/database.js';
 
 export default async function handler(req, res) {
+  // Debug log to verify endpoint is being called
+  console.log('🔵 [REGISTER] Endpoint chamado - Method:', req.method, 'URL:', req.url);
+  
+  // Only accept POST requests
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ 
+      error: 'Method not allowed',
+      allowedMethods: ['POST']
+    });
   }
 
   try {
-    const { email, password, nome, telefone } = req.body;
+    // Frontend sends: nome, email, senha, telefone
+    const { nome, email, senha, telefone } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email e senha são obrigatórios' });
+    // Validate required fields
+    if (!nome || !email || !senha) {
+      return res.status(400).json({ 
+        error: 'Campos obrigatórios faltando',
+        required: ['nome', 'email', 'senha']
+      });
     }
 
-    // Validar formato de email
+    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return res.status(400).json({ error: 'Email inválido' });
+      return res.status(400).json({ 
+        error: 'Email inválido'
+      });
     }
 
-    // Validar senha (mínimo 6 caracteres)
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Senha deve ter no mínimo 6 caracteres' });
+    // Validate password length
+    if (senha.length < 6) {
+      return res.status(400).json({ 
+        error: 'A senha deve ter no mínimo 6 caracteres'
+      });
     }
 
-    // Registrar usuário
-    const user = await registerUser(email, password);
+    console.log('📝 Tentando registrar novo usuário:', email);
 
-    // Criar lead se nome e telefone foram fornecidos
+    // Check if user already exists
+    const existingUser = getUserByEmail(email);
+    if (existingUser) {
+      console.log('⚠️ Email já cadastrado:', email);
+      return res.status(409).json({ 
+        error: 'Este email já está cadastrado. Faça login.'
+      });
+    }
+
+    // Hash password
+    const senha_hash = await hashPassword(senha);
+
+    // Create user in database
+    const newUser = createUser({
+      nome: nome.trim(),
+      email: email.trim().toLowerCase(),
+      senha_hash: senha_hash,
+      telefone: telefone ? telefone.trim() : null,
+      tentativas_restantes: 10 // Initial free attempts
+    });
+
+    console.log('✅ Usuário criado com sucesso:', newUser.id);
+
+    // Create lead if nome or telefone provided
     if (nome || telefone) {
       createLead({
         nome: nome || '',
@@ -37,20 +76,29 @@ export default async function handler(req, res) {
       });
     }
 
-    // Gerar token
-    const token = generateToken(user.id);
+    // Generate JWT token
+    const token = generateToken(newUser.id);
 
+    // Return success with token and user data
     return res.status(201).json({
       success: true,
+      message: 'Conta criada com sucesso',
+      token: token,
       user: {
-        id: user.id,
-        email: user.email,
-        tentativas_restantes: user.tentativas_restantes
-      },
-      token
+        id: newUser.id,
+        nome: newUser.nome,
+        email: newUser.email,
+        telefone: newUser.telefone,
+        tentativas_restantes: newUser.tentativas_restantes || 10
+      }
     });
+
   } catch (error) {
-    console.error('Erro no registro:', error);
-    return res.status(400).json({ error: error.message || 'Erro ao registrar usuário' });
+    console.error('❌ Erro no registro:', error);
+    
+    return res.status(500).json({ 
+      error: 'Erro ao criar conta. Tente novamente.',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 }
